@@ -20,17 +20,17 @@ export class Suvidha {
     private validationHandler = validationErrHandler;
     private unexpectedErrHandler = unexpectedErrHandler;
 
-    constructor() {}
+    constructor() { }
 
-    setControllerResponseHandler(handler: Handler) {
+    set controllerResponseHandler(handler: Handler) {
         this.responseHandler = handler;
     }
 
-    setControllerExceptionHandler(handler: Handler) {
+    set controllerExceptionHandler(handler: Handler) {
         this.errHandler = handler;
     }
 
-    setValidationExceptionHandler(handler: Handler) {
+    set validationExceptionHandler(handler: Handler) {
         this.errHandler = handler;
     }
 
@@ -79,7 +79,8 @@ export class Suvidha {
         validations: T,
         requestHandler: (req: TypedRequest<T>, res: Response) => R,
     ) {
-        return async (req: TypedRequest<T>, res: Response): Promise<void> => {
+        return async (_req: Request, res: Response): Promise<void> => {
+            const req = _req as unknown as TypedRequest<T>;
             try {
                 await this.runValidations(validations, req, res);
 
