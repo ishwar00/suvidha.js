@@ -1,0 +1,27 @@
+{
+  "name": "suvidha",
+  "version": "0.1.0",
+  "description": "validation layer for requests in express",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "test": "test"
+  },
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ishwar",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "zod": "^3.23.8"
+  },
+  "dependencies": {
+    "http-status-codes": "^2.3.0"
+  }
+}
