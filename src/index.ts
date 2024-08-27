@@ -26,11 +26,11 @@ export class Suvidha {
         this.responseHandler = handler;
     }
 
-    set controllerExceptionHandler(handler: Handler) {
+    set controllerErrHandler(handler: Handler) {
         this.errHandler = handler;
     }
 
-    set validationExceptionHandler(handler: Handler) {
+    set validationErrHandler(handler: Handler) {
         this.errHandler = handler;
     }
 

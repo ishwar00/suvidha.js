@@ -1,10 +1,10 @@
 import { Response } from "express";
 import { TypedRequest, ValidationConfig } from "./types";
 import { getReasonPhrase, StatusCodes as HttpStatus } from "http-status-codes";
-import { ServerInternalErr } from "./httpErrs/ServerInternalErr";
-import { HttpErr } from "./httpErrs/HttpErr";
 import { ZodError } from "zod";
-import { BadRequestErr } from "./httpErrs/BadRequestErr";
+import { InternalServerError } from "./httpResponses/serverErr";
+import { HttpErr } from "./httpResponses/HttpErr";
+import { BadRequestErr } from "./httpResponses/clientErr";
 
 export async function controllerResponseHandler<
     const T extends ValidationConfig,
@@ -30,7 +30,7 @@ export async function controllerResponseHandler<
         case "function":
     }
 
-    throw new ServerInternalErr({
+    throw new InternalServerError({
         cause: response,
         description: "controller has returned unexpected value.",
     });
@@ -72,7 +72,7 @@ export async function validationErrHandler(err: unknown): Promise<void> {
         throw new BadRequestErr(errData);
     }
 
-    throw new ServerInternalErr();
+    throw new InternalServerError();
 }
 
 export async function unexpectedErrHandler(err: unknown) {
