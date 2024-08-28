@@ -1,43 +1,51 @@
 import { Response } from "express";
-import { TypedRequest, ValidationConfig } from "./types";
+import { JsTypes, TypedRequest, ValidationConfig } from "./types";
 import { getReasonPhrase, StatusCodes as HttpStatus } from "http-status-codes";
 import { ZodError } from "zod";
 import { InternalServerError } from "./httpResponses/serverErr";
 import { HttpErr } from "./httpResponses/HttpErr";
 import { BadRequestErr } from "./httpResponses/clientErr";
+import { HttpResponse } from "./httpResponses/HttpResponse";
 
 export async function controllerResponseHandler<
     const T extends ValidationConfig,
 >(response: unknown, _req: TypedRequest<T>, res: Response): Promise<void> {
-    switch (typeof response) {
-        case "string":
-        case "number":
-        case "boolean":
-        case "undefined":
-        case "object": {
-            const data = {
-                status: "success",
-                data: response ?? null,
-            };
-
-            return void res
-                .status(HttpStatus.OK)
-                .contentType("application/json")
-                .json(data);
-        }
-        case "bigint":
-        case "symbol":
-        case "function":
+    if (isInvalidResponse(response)) {
+        throw new InternalServerError({
+            cause: response,
+            description: "controller has returned unexpected value.",
+        });
     }
 
-    throw new InternalServerError({
-        cause: response,
-        description: "controller has returned unexpected value.",
-    });
+    if (response instanceof HttpResponse) {
+        const data = {
+            status: "success",
+            data: response.body,
+        };
+
+        for (const [key, value] of Object.entries(response.headers)) {
+            res.setHeader(key, value);
+        }
+
+        return void res.status(response.statusCode).json(data);
+    }
+
+    return void res.status(HttpStatus.OK).json(response);
 }
 
-function isApiUserErr(status: HttpStatus) {
-    return [HttpStatus.BAD_REQUEST, HttpStatus.NOT_FOUND].includes(status);
+/// responses from controller that are not valid
+function isInvalidResponse(reply: unknown): boolean {
+    const invalidReply: string[] = [
+        "bigint",
+        "symbol",
+        "function",
+    ] satisfies JsTypes[]; // just to avoid typos
+
+    return invalidReply.includes(typeof reply);
+}
+
+function isClientErr(statusCode: number) {
+    return statusCode >= 400 && statusCode < 500;
 }
 
 export async function controllerErrHandler<const T extends ValidationConfig>(
@@ -47,8 +55,9 @@ export async function controllerErrHandler<const T extends ValidationConfig>(
 ): Promise<void> {
     if (err instanceof HttpErr) {
         const body = err.getBody() ?? { message: err.getMessage() };
-        return void res.status(err.getStatus()).json({
-            status: isApiUserErr(err.getStatus()) ? "error" : "fail",
+        const statusCode = err.getStatus();
+        return void res.status(statusCode).json({
+            status: isClientErr(statusCode) ? "error" : "fail",
             data: body,
         });
     }
@@ -62,10 +71,14 @@ export async function controllerErrHandler<const T extends ValidationConfig>(
     });
 }
 
-export async function validationErrHandler(err: unknown): Promise<void> {
+export async function validationErrHandler<const T extends ValidationConfig>(
+    err: unknown,
+    _req: TypedRequest<T>,
+    _res: Response,
+): Promise<void> {
     if (err instanceof ZodError) {
         const errData = {
-            message: getReasonPhrase(HttpStatus.BAD_REQUEST),
+            message: "Data provided does not meet the required format.",
             ...err.flatten(),
         };
 

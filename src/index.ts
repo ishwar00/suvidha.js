@@ -46,7 +46,7 @@ export class Suvidha {
                 (req as any)[key] = data;
             }
         } catch (err: unknown) {
-            await this.validationHandler(err);
+            await this.validationHandler(err, req, _res);
             throw err;
         }
     }
