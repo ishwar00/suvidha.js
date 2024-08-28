@@ -30,7 +30,9 @@ export async function controllerResponseHandler<
         return void res.status(response.statusCode).json(data);
     }
 
-    return void res.status(HttpStatus.OK).json(response);
+    return void res
+        .status(HttpStatus.OK)
+        .json({ status: "success", data: response });
 }
 
 /// responses from controller that are not valid
