@@ -16,6 +16,23 @@
     "test": "jest --testTimeout=5000",
     "build": "npx tsc --noEmit"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ishwar00/suvidhajs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ishwar00/suvidhajs/issues"
+  },
+  "keywords": [
+    "typescript",
+    "schema",
+    "validation",
+    "type",
+    "inference",
+    "express",
+    "validation-layer",
+    "request-validation"
+  ],
   "author": "ishwar",
   "license": "ISC",
   "devDependencies": {
