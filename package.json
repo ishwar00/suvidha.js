@@ -13,7 +13,8 @@
     "/dist"
   ],
   "scripts": {
-    "test": "jest --testTimeout=5000"
+    "test": "jest --testTimeout=5000",
+    "build": "npx tsc --noEmit"
   },
   "author": "ishwar",
   "license": "ISC",
@@ -21,16 +22,17 @@
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.4",
     "@babel/preset-typescript": "^7.24.7",
-    "@types/express": "^4.17.21",
     "@types/jest": "^29.5.12",
     "@types/supertest": "^6.0.2",
     "babel-jest": "^29.7.0",
     "express": "^4.19.2",
     "jest": "^29.7.0",
     "supertest": "^7.0.0",
+    "typescript": "^5.5.4",
     "zod": "^3.23.8"
   },
   "dependencies": {
+    "@types/express": "^4.17.21",
     "http-status-codes": "^2.3.0"
   }
 }

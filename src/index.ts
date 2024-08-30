@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import {
     controllerErrHandler,
     controllerResponseHandler,
@@ -79,21 +79,20 @@ export class Suvidha {
         validations: T,
         requestHandler: (req: TypedRequest<T>, res: Response) => R,
     ) {
-        return async (_req: Request, res: Response): Promise<void> => {
-            const req = _req as unknown as TypedRequest<T>;
+        return async (_req: TypedRequest<T>, res: Response): Promise<void> => {
             try {
-                await this.runValidations(validations, req, res);
+                await this.runValidations(validations, _req, res);
 
-                const reply = await requestHandler(req, res);
+                const reply = await requestHandler(_req, res);
                 if (!res.writableEnded) {
-                    await this.responseHandler(reply, req, res);
+                    await this.responseHandler(reply, _req, res);
                 }
             } catch (err: unknown) {
                 try {
                     if (res.writableEnded) {
                         throw err;
                     }
-                    await this.errHandler(err, req, res);
+                    await this.errHandler(err, _req, res);
                 } catch (err) {
                     await this.unexpectedErrHandler(err);
                 }
