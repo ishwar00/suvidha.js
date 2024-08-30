@@ -1,15 +1,40 @@
+import { Request } from "express";
 import { z } from "zod";
+import { ExpectExtends, assert } from "../utils/types";
 
 /// inspired from: https://dev.to/denniscual/typescript-hack-simple-utility-type-for-changing-type-of-keys-4bba
-export type TypedRequest<T extends ValidationConfig> = {
+export type InferZodTypes<T extends ValidationConfig> = {
     [key in keyof T]: T[key] extends z.ZodTypeAny
-        ? key extends keyof Request
+        ? key extends RequestValidationKeys
             ? z.infer<T[key]>
-            : T[key]
-        : T[key];
-} & Omit<Request, keyof T>;
+            : never
+        : never;
+};
 
-export type ValidationConfig = Partial<Record<keyof Request, z.ZodTypeAny>>;
+type RequestParams<A, B> = {
+    [K in keyof B]: B[K] extends keyof A
+        ? A[B[K]]
+        : B[K] extends "query"
+          ? qs.ParsedQs
+          : unknown;
+};
+
+type Params<T extends ValidationConfig> = RequestParams<InferZodTypes<T>, Keys>;
+export type TypedRequest<T extends ValidationConfig> = Request<
+    Params<T>[0],
+    any,
+    Params<T>[1],
+    Params<T>[2]
+>;
+
+type Keys = ["params", "body", "query"];
+export type RequestValidationKeys = Keys[number];
+
+assert<ExpectExtends<keyof Request, RequestValidationKeys>>();
+
+export type ValidationConfig = Partial<
+    Record<RequestValidationKeys, z.ZodTypeAny>
+>;
 
 /// This will return data types in Javascript
 function __JSTypesFn() {

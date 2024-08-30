@@ -6,7 +6,7 @@ import {
     validationErrHandler,
 } from "./default_handlers";
 import z from "zod";
-import { TypedRequest, ValidationConfig } from "./types";
+import { RequestValidationKeys, TypedRequest, ValidationConfig } from "./types";
 
 type Handler = <const T extends ValidationConfig>(
     response: unknown,
@@ -20,7 +20,7 @@ export class Suvidha {
     private validationHandler = validationErrHandler;
     private unexpectedErrHandler = unexpectedErrHandler;
 
-    constructor() { }
+    constructor() {}
 
     set controllerResponseHandler(handler: Handler) {
         this.responseHandler = handler;
@@ -73,7 +73,7 @@ export class Suvidha {
      * ```
      * */
     prayog<
-        const T extends Partial<Record<keyof Request, z.ZodTypeAny>>,
+        const T extends Partial<Record<RequestValidationKeys, z.ZodTypeAny>>,
         R extends any = unknown,
     >(
         validations: T,
