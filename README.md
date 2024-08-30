@@ -12,18 +12,12 @@ app.post(
     defaultSuvidha.prayog({ body: params }, (req, _) => {
         const body = req.body; // type of body: { name: string }
         // do some stuff...
-        return {
-            message: "mission completed",
-        };
     }),
 );
 
 // with request handler
 function handler(req: Request<{ name: string }>, res: Response) {
     // some stuff...
-    return {
-        message: "mission completed.",
-    };
 }
 
 app.post("/post/create", defaultSuvidha.prayog({ params }, handler));
