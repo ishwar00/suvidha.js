@@ -13,11 +13,11 @@ app.get(
     }),
 );
 
-const params = z.object({ name: z.string() });
+const body = z.object({ name: z.string() });
 app.post(
-    "/post/create",
-    defaultSuvidha.prayog({ body: params }, (req, _) => {
-        const body = req.body; // type of body: { name: string }
+    "/post",
+    defaultSuvidha.prayog({ body }, (req, _) => {
+        const _body = req.body; // type of body: { name: string }
         // do some stuff...
         return {
             message: "mission completed",
@@ -25,11 +25,9 @@ app.post(
     }),
 );
 
-function handler(req: Request<{ name: string }>, res: Response) {
+function handler(req: Request<any, any, { name: string }>, res: Response) {
     // some stuff...
-    return {
-        message: "mission completed.",
-    };
+    return req.body;
 }
 
-app.post("/post/create", defaultSuvidha.prayog({ params }, handler));
+app.post("/post/echo", defaultSuvidha.prayog({ body }, handler));

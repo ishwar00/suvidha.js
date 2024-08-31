@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import {
     controllerErrHandler,
     controllerResponseHandler,
@@ -7,6 +7,7 @@ import {
 } from "./default_handlers";
 import z from "zod";
 import { RequestValidationKeys, TypedRequest, ValidationConfig } from "./types";
+import { assert, ExpectExtends } from "../utils/types";
 
 type Handler = <const T extends ValidationConfig>(
     response: unknown,
@@ -40,10 +41,11 @@ export class Suvidha {
         _res: Response,
     ) {
         try {
-            for (const [key, schema] of Object.entries(validations)) {
-                const rawData = (req as any)[key];
+            for (const [_key, schema] of Object.entries(validations)) {
+                const key = _key as keyof ValidationConfig;
+                const rawData = req[key];
                 const data = schema.parse(rawData);
-                (req as any)[key] = data;
+                req[key] = data;
             }
         } catch (err: unknown) {
             await this.validationHandler(err, req, _res);
