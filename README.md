@@ -8,7 +8,7 @@ let me explain through example
 ```ts
 const params = z.object({ name: z.string() });
 app.post(
-    "/post/create",
+    "/post",
     defaultSuvidha.prayog({ body: params }, (req, _) => {
         const body = req.body; // type of body: { name: string }
         // do some stuff...
@@ -20,7 +20,7 @@ function handler(req: Request<{ name: string }>, res: Response) {
     // some stuff...
 }
 
-app.post("/post/create", defaultSuvidha.prayog({ params }, handler));
+app.post("/post", defaultSuvidha.prayog({ params }, handler));
 ```
 
 It's little difficult to explain, it's a middleware? sort of, which adds a validation layer with type inference, not just that...(will add the rest of doc soon)
