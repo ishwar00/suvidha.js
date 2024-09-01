@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import {
     controllerErrHandler,
     controllerResponseHandler,
@@ -7,7 +7,6 @@ import {
 } from "./default_handlers";
 import z from "zod";
 import { RequestValidationKeys, TypedRequest, ValidationConfig } from "./types";
-import { assert, ExpectExtends } from "../utils/types";
 
 type Handler = <const T extends ValidationConfig>(
     response: unknown,
@@ -21,18 +20,22 @@ export class Suvidha {
     private validationHandler = validationErrHandler;
     private unexpectedErrHandler = unexpectedErrHandler;
 
-    constructor() {}
+    constructor() { }
 
     set controllerResponseHandler(handler: Handler) {
         this.responseHandler = handler;
     }
 
-    set controllerErrHandler(handler: Handler) {
+    set controllerErrorHandler(handler: Handler) {
         this.errHandler = handler;
     }
 
-    set validationErrHandler(handler: Handler) {
+    set validationErrorHandler(handler: Handler) {
         this.errHandler = handler;
+    }
+
+    set unexpectedErrorHandler(handler: (err: unknown) => Promise<void>) {
+        this.unexpectedErrHandler = handler;
     }
 
     private async runValidations<const T extends ValidationConfig>(

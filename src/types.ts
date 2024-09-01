@@ -16,7 +16,7 @@ type RequestParams<A, B> = {
         ? A[B[K]]
         : B[K] extends "query"
           ? qs.ParsedQs
-          : unknown;
+          : unknown; // TODO: `never` ?
 };
 
 type Params<T extends ValidationConfig> = RequestParams<InferZodTypes<T>, Keys>;

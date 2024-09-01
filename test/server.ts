@@ -13,10 +13,11 @@ app.get(
     }),
 );
 
-const body = z.object({ name: z.string() });
+const schema = z.object({ name: z.string() });
+
 app.post(
     "/post",
-    defaultSuvidha.prayog({ body }, (req, _) => {
+    defaultSuvidha.prayog({ body: schema }, (req, _) => {
         const _body = req.body; // type of body: { name: string }
         // do some stuff...
         return {
@@ -30,4 +31,4 @@ function handler(req: Request<any, any, { name: string }>, res: Response) {
     return req.body;
 }
 
-app.post("/post/echo", defaultSuvidha.prayog({ body }, handler));
+app.post("/post/echo", defaultSuvidha.prayog({ body: schema }, handler));
