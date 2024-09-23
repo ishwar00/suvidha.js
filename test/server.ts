@@ -16,9 +16,9 @@ app.get(
 const schema = z.object({ name: z.string() });
 
 app.post(
-    "/post",
+    "/posts",
     defaultSuvidha.prayog({ body: schema }, (req, _) => {
-        const _body = req.body; // type of body: { name: string }
+        const post = req.body; // Type of body: { name: string }
         // do some stuff...
         return {
             message: "mission completed",
@@ -27,8 +27,8 @@ app.post(
 );
 
 function handler(req: Request<any, any, { name: string }>, res: Response) {
-    // some stuff...
+    // Some stuff...
     return req.body;
 }
 
-app.post("/post/echo", defaultSuvidha.prayog({ body: schema }, handler));
+app.post("/echo", defaultSuvidha.prayog({ body: schema }, handler));

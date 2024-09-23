@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { JsTypes, TypedRequest, ValidationConfig } from "./types";
+import { JsTypes, TypedRequest, ValidationConfig } from "./typedRequest";
 import { getReasonPhrase, StatusCodes as HttpStatus } from "http-status-codes";
 import { ZodError } from "zod";
 import { InternalServerError } from "./httpResponses/serverErr";
@@ -7,41 +7,43 @@ import { HttpErr } from "./httpResponses/HttpErr";
 import { BadRequestErr } from "./httpResponses/clientErr";
 import { HttpResponse } from "./httpResponses/HttpResponse";
 
-export async function controllerResponseHandler<
-    const T extends ValidationConfig,
->(response: unknown, _req: TypedRequest<T>, res: Response): Promise<void> {
-    if (isInvalidResponse(response)) {
+export async function controllerResponseHandler<T extends ValidationConfig>(
+    controllerResponse: unknown,
+    req: TypedRequest<T>,
+    res: Response,
+): Promise<void> {
+    if (isInvalidResponse(controllerResponse)) {
         throw new InternalServerError({
-            cause: response,
+            cause: controllerResponse,
             description: "controller has returned unexpected value.",
         });
     }
 
-    if (response instanceof HttpResponse) {
+    if (controllerResponse instanceof HttpResponse) {
         const data = {
             status: "success",
-            data: response.body,
+            data: controllerResponse.body,
         };
 
-        for (const [key, value] of Object.entries(response.headers)) {
+        for (const [key, value] of Object.entries(controllerResponse.headers)) {
             res.setHeader(key, value);
         }
 
-        return void res.status(response.statusCode).json(data);
+        return void res.status(controllerResponse.statusCode).json(data);
     }
 
     return void res
         .status(HttpStatus.OK)
-        .json({ status: "success", data: response });
+        .json({ status: "success", data: controllerResponse });
 }
 
-/// responses from controller that are not valid
+/// Responses from controller that are not valid
 function isInvalidResponse(reply: unknown): boolean {
     const invalidReply: string[] = [
         "bigint",
         "symbol",
         "function",
-    ] satisfies JsTypes[]; // just to avoid typos
+    ] satisfies JsTypes[]; // Just to avoid typos
 
     return invalidReply.includes(typeof reply);
 }
@@ -50,14 +52,14 @@ function isClientErr(statusCode: number) {
     return statusCode >= 400 && statusCode < 500;
 }
 
-export async function controllerErrHandler<const T extends ValidationConfig>(
+export async function controllerErrHandler<T extends ValidationConfig>(
     err: unknown,
     _req: TypedRequest<T>,
     res: Response,
 ): Promise<void> {
     if (err instanceof HttpErr) {
-        const body = err.getBody() ?? { message: err.getMessage() };
-        const statusCode = err.getStatus();
+        const body = err.body ?? { message: err.message };
+        const statusCode = err.statusCode;
         return void res.status(statusCode).json({
             status: isClientErr(statusCode) ? "error" : "fail",
             data: body,
@@ -73,10 +75,10 @@ export async function controllerErrHandler<const T extends ValidationConfig>(
     });
 }
 
-export async function validationErrHandler<const T extends ValidationConfig>(
+export async function validationErrHandler<T extends ValidationConfig>(
     err: unknown,
-    _req: TypedRequest<T>,
-    _res: Response,
+    req: TypedRequest<T>,
+    res: Response,
 ): Promise<void> {
     if (err instanceof ZodError) {
         const errData = {

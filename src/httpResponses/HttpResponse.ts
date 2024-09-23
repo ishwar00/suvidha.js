@@ -8,7 +8,7 @@ export class HttpResponse {
     constructor(
         readonly body: string | Record<string, any> | null,
         readonly statusCode: number,
-        private readonly options?: HttpResponseOptions,
+        readonly options?: HttpResponseOptions,
     ) {
         this.headers = options?.headers ?? {};
     }
@@ -20,13 +20,5 @@ export class HttpResponse {
 
     public getHeader(name: string): string | undefined {
         return this.headers[name];
-    }
-
-    public toJSON(): Record<string, any> {
-        return {
-            statusCode: this.statusCode,
-            body: this.body,
-            headers: this.headers,
-        };
     }
 }

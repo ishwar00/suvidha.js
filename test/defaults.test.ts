@@ -9,9 +9,9 @@ test("GET /tests", async () => {
     expect(body).toEqual({ status: "success", data: { message: "/tests" } });
 });
 
-test("POST /post", async () => {
+test("POST /posts", async () => {
     const { status, body } = await request(app)
-        .post("/post")
+        .post("/posts")
         .send({ name: "warrrr" });
 
     expect(status).toEqual(200);
@@ -21,11 +21,9 @@ test("POST /post", async () => {
     });
 });
 
-test("POST /post/echo", async () => {
+test("POST /echo", async () => {
     const bodyData = { name: "warrrr" };
-    const { status, body } = await request(app)
-        .post("/post/echo")
-        .send(bodyData);
+    const { status, body } = await request(app).post("/echo").send(bodyData);
 
     expect(status).toEqual(200);
     expect(body).toEqual({

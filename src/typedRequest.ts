@@ -36,7 +36,7 @@ export type ValidationConfig = Partial<
     Record<RequestValidationKeys, z.ZodTypeAny>
 >;
 
-/// This will return data types in Javascript
+/// This will return data types in JavaScript
 function __JSTypesFn() {
     return typeof ({} as any);
 }
