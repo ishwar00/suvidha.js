@@ -1,90 +1,67 @@
-import { Response } from "express";
-import {
-    controllerErrHandler,
-    controllerResponseHandler,
-    unexpectedErrHandler,
-    validationErrHandler,
-} from "./defaultHandlers";
-import z from "zod";
-import {
-    RequestValidationKeys,
-    TypedRequest,
-    ValidationConfig,
-} from "./typedRequest";
+import { z } from "zod";
+import { Response, Request } from "express";
+import * as core from "express-serve-static-core";
+import { Handlers } from "./Handlers";
 
-type Handler = <T extends ValidationConfig>(
-    response: unknown,
-    req: TypedRequest<T>,
-    res: Response,
-) => Promise<void>;
+class Suvidha<B = any, P = core.ParamsDictionary, Q = core.Query> {
+    private bodySchema: z.ZodType<B> = z.any();
+    private paramsSchema: z.ZodType<P> = z.any();
+    private querySchema: z.ZodType<Q> = z.any();
 
-export class Suvidha {
-    private responseHandler = controllerResponseHandler;
-    private errHandler = controllerErrHandler;
-    private validationHandler = validationErrHandler;
-    private unexpectedErrHandler = unexpectedErrHandler;
+    private constructor(private readonly handlers: Handlers) {}
 
-    constructor() { }
-
-    set controllerResponseHandler(handler: Handler) {
-        this.responseHandler = handler;
+    static create(handlers: Handlers) {
+        return new Suvidha(handlers);
     }
 
-    set controllerErrorHandler(handler: Handler) {
-        this.errHandler = handler;
+    params<T extends z.ZodTypeAny>(
+        schema: T,
+    ): Omit<Suvidha<B, z.infer<T>, Q>, "params"> {
+        this.paramsSchema = schema;
+        return this;
     }
 
-    set validationErrorHandler(handler: Handler) {
-        this.errHandler = handler;
+    body<T extends z.ZodTypeAny>(
+        schema: T,
+    ): Omit<Suvidha<z.infer<T>, P, Q>, "body"> {
+        this.bodySchema = schema;
+        return this;
     }
 
-    set unexpectedErrorHandler(handler: (err: unknown) => Promise<void>) {
-        this.unexpectedErrHandler = handler;
+    query<T extends z.ZodTypeAny>(
+        schema: T,
+    ): Omit<Suvidha<B, P, z.infer<T>>, "query"> {
+        this.querySchema = schema;
+        return this;
     }
 
-    private async runValidations<T extends ValidationConfig>(
-        validations: T,
-        req: TypedRequest<T>,
-        res: Response,
+    parse(req: Readonly<Request>) {
+        const { body, params, query } = req;
+
+        this.bodySchema.parse(body);
+        this.querySchema.parse(query);
+        this.paramsSchema.parse(params);
+    }
+
+    handler<R>(
+        handler: (
+            req: Request<P, R, B, Q>,
+            res: Response,
+            next: core.NextFunction,
+        ) => R,
     ) {
-        try {
-            for (const [_key, schema] of Object.entries(validations)) {
-                const key = _key as keyof ValidationConfig;
-                const rawData = req[key];
-                const data = schema.parse(rawData);
-                req[key] = data;
-            }
-        } catch (err: unknown) {
-            await this.validationHandler(err, req, res);
-            throw err;
-        }
-    }
-
-    /**
-     *
-     *
-     * */
-    prayog<T extends ValidationConfig, R extends any = unknown>(
-        validations: T,
-        requestHandler: (req: TypedRequest<T>, res: Response) => R,
-    ) {
-        return async (req: TypedRequest<T>, res: Response): Promise<void> => {
+        return async (req: Request, res: Response, next: core.NextFunction) => {
+            const ctx = { req, res };
             try {
-                await this.runValidations(validations, req, res);
-
-                const reply = await requestHandler(req, res);
-                if (!res.writableEnded) {
-                    await this.responseHandler(reply, req, res);
-                }
+                this.parse(req);
+                const output = await handler(req as any, res, next);
+                res.writableEnded
+                    ? await this.handlers.onUncaughtData(output, ctx)
+                    : await this.handlers.onComplete(output, ctx);
             } catch (err: unknown) {
-                try {
-                    if (res.writableEnded) {
-                        throw err;
-                    }
-                    await this.errHandler(err, req, res);
-                } catch (err) {
-                    await this.unexpectedErrHandler(err);
-                }
+                res.writableEnded
+                    ? await this.handlers.onUncaughtData(err, ctx)
+                    : await this.handlers.onErr(err, ctx);
             }
         };
     }

@@ -1,97 +1,86 @@
-import { Response } from "express";
-import { JsTypes, TypedRequest, ValidationConfig } from "./typedRequest";
-import { getReasonPhrase, StatusCodes as HttpStatus } from "http-status-codes";
+import { Request, Response } from "express";
+import { StatusCodes as HttpStatus } from "http-status-codes";
 import { ZodError } from "zod";
 import { InternalServerError } from "./httpResponses/serverErr";
 import { HttpErr } from "./httpResponses/HttpErr";
 import { BadRequestErr } from "./httpResponses/clientErr";
 import { HttpResponse } from "./httpResponses/HttpResponse";
+import { Handlers } from "./Handlers";
 
-export async function controllerResponseHandler<T extends ValidationConfig>(
-    controllerResponse: unknown,
-    req: TypedRequest<T>,
-    res: Response,
-): Promise<void> {
-    if (isInvalidResponse(controllerResponse)) {
-        throw new InternalServerError({
-            cause: controllerResponse,
-            description: "controller has returned unexpected value.",
-        });
+export class DefaultHandlers implements Handlers {
+    private constructor() {}
+
+    private isClientErr(statusCode: number) {
+        return statusCode >= 400 && statusCode < 500;
     }
 
-    if (controllerResponse instanceof HttpResponse) {
-        const data = {
-            status: "success",
-            data: controllerResponse.body,
-        };
+    static create() {
+        return new DefaultHandlers();
+    }
 
-        for (const [key, value] of Object.entries(controllerResponse.headers)) {
-            res.setHeader(key, value);
+    // Should I separate handler for schema errors?
+    onErr(
+        err: unknown,
+        ctx: { req: Request; res: Response },
+    ): Promise<void> | void {
+        if (err instanceof HttpErr) {
+            const { statusCode, message, body } = err;
+            return void ctx.res.status(statusCode).json({
+                status: this.isClientErr(statusCode) ? "error" : "fail",
+                data: body ?? { message },
+            });
         }
-
-        return void res.status(controllerResponse.statusCode).json(data);
     }
 
-    return void res
-        .status(HttpStatus.OK)
-        .json({ status: "success", data: controllerResponse });
-}
-
-/// Responses from controller that are not valid
-function isInvalidResponse(reply: unknown): boolean {
-    const invalidReply: string[] = [
-        "bigint",
-        "symbol",
-        "function",
-    ] satisfies JsTypes[]; // Just to avoid typos
-
-    return invalidReply.includes(typeof reply);
-}
-
-function isClientErr(statusCode: number) {
-    return statusCode >= 400 && statusCode < 500;
-}
-
-export async function controllerErrHandler<T extends ValidationConfig>(
-    err: unknown,
-    _req: TypedRequest<T>,
-    res: Response,
-): Promise<void> {
-    if (err instanceof HttpErr) {
-        const body = err.body ?? { message: err.message };
-        const statusCode = err.statusCode;
-        return void res.status(statusCode).json({
-            status: isClientErr(statusCode) ? "error" : "fail",
-            data: body,
-        });
-    }
-
-    console.log(JSON.stringify(err, null, 2));
-    res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        status: "fail",
-        data: {
-            message: getReasonPhrase(HttpStatus.INTERNAL_SERVER_ERROR),
-        },
-    });
-}
-
-export async function validationErrHandler<T extends ValidationConfig>(
-    err: unknown,
-    req: TypedRequest<T>,
-    res: Response,
-): Promise<void> {
-    if (err instanceof ZodError) {
+    onSchemaErr(err: ZodError) {
         const errData = {
             message: "Data provided does not meet the required format.",
+            // TODO: Make it jsend compliant
             ...err.flatten(),
         };
-
         throw new BadRequestErr(errData);
     }
 
-    throw new InternalServerError();
-}
+    onComplete(
+        output: unknown,
+        ctx: { req: Request; res: Response },
+    ): Promise<void> | void {
+        if (output instanceof HttpResponse) {
+            const { headers, body, statusCode } = output;
+            for (const [key, value] of Object.entries(headers)) {
+                ctx.res.setHeader(key, value);
+            }
+            return void ctx.res.status(statusCode).json({
+                status: "success",
+                data: body,
+            });
+        }
 
-export async function unexpectedErrHandler(err: unknown) {
-    console.log(JSON.stringify(err));
+        switch (typeof output) {
+            case "string":
+            case "number":
+            case "boolean":
+            case "undefined":
+            case "object": {
+                return void ctx.res.status(HttpStatus.OK).json({
+                    status: "success",
+                    data: output ?? null,
+                });
+            }
+            default: {
+                const err = {
+                    cause: output,
+                    description: `Suvidha: Can't proccess values of type ${typeof output}.`,
+                };
+                throw new InternalServerError(err);
+            }
+        }
+    }
+
+    onUncaughtData(
+        data: unknown,
+        _: { req: Request; res: Response },
+    ): Promise<void> | void {
+        console.log(`Suvidha: UncaughtData ${JSON.stringify(data)}`);
+    }
 }
