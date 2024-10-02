@@ -26,6 +26,8 @@ export class DefaultHandlers implements Handlers {
                 data: body ?? { message },
             });
         }
+
+        throw new InternalServerError({ err });
     }
 
     onSchemaErr(err: ZodError) {
