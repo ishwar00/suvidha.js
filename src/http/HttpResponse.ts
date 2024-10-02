@@ -19,12 +19,12 @@ export class HttpResponse {
         return getReasonPhrase(this.statusCode);
     }
 
-    public setHeader(name: string, value: string): this {
+    setHeader(name: string, value: string): this {
         this.headers[name] = value;
         return this;
     }
 
-    public getHeader(name: string): string | undefined {
+    getHeader(name: string): string | undefined {
         return this.headers[name];
     }
 }

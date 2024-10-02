@@ -1,6 +1,3 @@
-import { Suvidha } from "../src";
-import { DefaultHandlers } from "../src/defaultHandlers";
+import { Suvidha, DefaultHandlers } from "../src";
 
-export function suvidha() {
-    return Suvidha.create(DefaultHandlers.create());
-}
+export const suvidha = () => Suvidha.create(DefaultHandlers.create());
