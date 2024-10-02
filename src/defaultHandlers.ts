@@ -1,4 +1,4 @@
-import { StatusCodes as HttpStatus } from "http-status-codes";
+import { getReasonPhrase, StatusCodes as HttpStatus } from "http-status-codes";
 import { ZodError } from "zod";
 import { InternalServerError } from "./http/serverErr";
 import { HttpErr } from "./http/HttpErr";
@@ -17,7 +17,6 @@ export class DefaultHandlers implements Handlers {
         return new DefaultHandlers();
     }
 
-    // Should I separate handler for schema errors?
     onErr(err: unknown, ctx: Context): Promise<void> | void {
         if (err instanceof HttpErr) {
             const { statusCode, message, body } = err;
@@ -27,13 +26,16 @@ export class DefaultHandlers implements Handlers {
             });
         }
 
-        throw new InternalServerError({ err });
+        const statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+        ctx.res.status(statusCode).json({
+            status: "fail",
+            data: getReasonPhrase(statusCode),
+        });
     }
 
     onSchemaErr(err: ZodError) {
         const errData = {
             message: "Data provided does not meet the required format.",
-            // TODO: Make it jsend compliant
             ...err.flatten(),
         };
         throw new BadRequestErr(errData);
