@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { defaultSuvidha } from "./prayog";
+import { suvidha } from "./suvidha";
 import bodyParser from "body-parser";
 import { z } from "zod";
 
@@ -8,7 +8,7 @@ app.use(bodyParser.json());
 
 app.get(
     "/tests",
-    defaultSuvidha.prayog({}, () => {
+    suvidha().handler(() => {
         return { message: "/tests" };
     }),
 );
@@ -17,18 +17,20 @@ const schema = z.object({ name: z.string() });
 
 app.post(
     "/posts",
-    defaultSuvidha.prayog({ body: schema }, (req, _) => {
-        const post = req.body; // Type of body: { name: string }
-        // do some stuff...
-        return {
-            message: "mission completed",
-        };
-    }),
+    suvidha()
+        .body(schema)
+        .handler((req, _) => {
+            const post = req.body; // Type of body: { name: string }
+            // do some stuff...
+            return {
+                message: "mission completed",
+            };
+        }),
 );
 
-function handler(req: Request<any, any, { name: string }>, res: Response) {
+function requestHandler(req: Request<any, any, { name: string }>, _: Response) {
     // Some stuff...
     return req.body;
 }
 
-app.post("/echo", defaultSuvidha.prayog({ body: schema }, handler));
+app.post("/echo", suvidha().body(schema).handler(requestHandler));
