@@ -3,6 +3,8 @@ import { Response, Request } from "express";
 import * as core from "express-serve-static-core";
 import { Context, Handlers } from "./Handlers";
 
+export { DefaultHandlers } from "./defaultHandlers";
+
 export class Suvidha<
     B extends any = any,
     P extends core.ParamsDictionary = core.ParamsDictionary,

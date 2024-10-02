@@ -1,3 +1,5 @@
+import { getReasonPhrase, StatusCodes as HttpStatus } from "http-status-codes";
+
 export interface HttpResponseOptions {
     headers?: Record<string, string>;
 }
@@ -6,11 +8,15 @@ export class HttpResponse {
     public readonly headers: Record<string, string>;
 
     constructor(
-        readonly body: string | Record<string, any> | null,
-        readonly statusCode: number,
+        readonly body: unknown,
+        readonly statusCode: HttpStatus,
         readonly options?: HttpResponseOptions,
     ) {
         this.headers = options?.headers ?? {};
+    }
+
+    message() {
+        return getReasonPhrase(this.statusCode);
     }
 
     public setHeader(name: string, value: string): this {

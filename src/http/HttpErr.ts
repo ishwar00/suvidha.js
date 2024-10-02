@@ -5,11 +5,15 @@ export interface HttpErrOptions {
     description?: string;
 }
 
+export type ErrObject = {
+    message?: string;
+} & Record<string, any>;
+
 export interface IHttpError {
     get message(): string;
     get statusCode(): number;
-    get body(): Record<string, any> | undefined;
-    get cause(): any;
+    get body(): string | ErrObject;
+    get cause(): unknown | undefined;
 }
 
 export function isKeyObject(value: unknown): value is Record<string, unknown> {
@@ -17,56 +21,39 @@ export function isKeyObject(value: unknown): value is Record<string, unknown> {
 }
 
 export class HttpErr extends Error implements IHttpError {
-    private _cause: any = null;
-    private _message: any = null;
-
     constructor(
-        private readonly _body: string | Record<string, any>,
-        private readonly _statusCode: HttpStatus,
+        private readonly errMessageOrObject: string | ErrObject,
+        private readonly status: HttpStatus,
         private readonly options?: HttpErrOptions,
     ) {
         super();
-        this.initMessage();
-        this.initName();
-        this.initCause();
+        super.message = this.message;
     }
 
-    private initMessage(): void {
-        if (typeof this._body === "string") {
-            this._message = this._body;
+    override get message() {
+        if (typeof this.errMessageOrObject === "string") {
+            return this.errMessageOrObject;
         } else {
-            this._message =
-                this._body["message"] ?? getReasonPhrase(this._statusCode);
+            return (
+                this.errMessageOrObject["message"] ??
+                getReasonPhrase(this.status)
+            );
         }
     }
 
-    private initName(): void {
-        this.name = this.constructor.name;
+    override get name() {
+        return this.constructor.name;
     }
 
-    private initCause(): void {
-        if (this.options?.cause) {
-            this._cause = this.options.cause;
-            return;
-        }
+    get cause() {
+        return this.options?.cause;
     }
 
-    get body(): Record<string, any> | undefined {
-        if (isKeyObject(this._body)) {
-            return this._body;
-        }
-        return undefined;
-    }
-
-    override get message(): string {
-        return this._message;
+    get body() {
+        return this.errMessageOrObject;
     }
 
     get statusCode(): HttpStatus {
-        return this._statusCode;
-    }
-
-    get cause(): any {
-        return this._cause;
+        return this.status;
     }
 }
