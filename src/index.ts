@@ -7,39 +7,37 @@ export class Suvidha<
     B extends any = any,
     P extends core.ParamsDictionary = core.ParamsDictionary,
     Q extends core.Query = core.Query,
+    Built extends keyof Suvidha = never,
 > {
     private bodySchema: z.ZodType<B> = z.any();
     private paramsSchema: z.ZodType<P> = z.any();
     private querySchema: z.ZodType<Q> = z.any();
 
-    private constructor(private readonly handlers: Handlers) {}
+    constructor(private readonly handlers: Handlers) {}
 
     static create(handlers: Handlers) {
         return new Suvidha(handlers);
     }
 
-    params<T extends z.ZodTypeAny>(
-        schema: T,
-    ): Omit<Suvidha<B, z.infer<T>, Q>, "params"> {
+    params<T extends z.ZodTypeAny>(schema: T) {
         this.paramsSchema = schema;
-        return this;
+        type K = Built | "params";
+        return this as Omit<Suvidha<B, z.infer<T>, Q, K>, K>;
     }
 
-    body<T extends z.ZodTypeAny>(
-        schema: T,
-    ): Omit<Suvidha<z.infer<T>, P, Q>, "body"> {
+    body<T extends z.ZodTypeAny>(schema: T) {
         this.bodySchema = schema;
-        return this;
+        type K = Built | "body";
+        return this as Omit<Suvidha<z.infer<T>, P, Q, K>, K>;
     }
 
-    query<T extends z.ZodTypeAny>(
-        schema: T,
-    ): Omit<Suvidha<B, P, z.infer<T>>, "query"> {
+    query<T extends z.ZodTypeAny>(schema: T) {
         this.querySchema = schema;
-        return this;
+        type K = Built | "query";
+        return this as Omit<Suvidha<B, P, z.infer<T>, K>, K>;
     }
 
-    async parse(ctx: Context) {
+    private async parse(ctx: Context) {
         try {
             const { body, params, query } = ctx.req;
             ctx.req.body = this.bodySchema.parse(body);
