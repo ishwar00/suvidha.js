@@ -1,11 +1,10 @@
-import { Request, Response } from "express";
 import { StatusCodes as HttpStatus } from "http-status-codes";
 import { ZodError } from "zod";
-import { InternalServerError } from "./httpResponses/serverErr";
-import { HttpErr } from "./httpResponses/HttpErr";
-import { BadRequestErr } from "./httpResponses/clientErr";
-import { HttpResponse } from "./httpResponses/HttpResponse";
-import { Handlers } from "./Handlers";
+import { InternalServerError } from "./http/serverErr";
+import { HttpErr } from "./http/HttpErr";
+import { BadRequestErr } from "./http/clientErr";
+import { HttpResponse } from "./http/HttpResponse";
+import { Context, Handlers } from "./Handlers";
 
 export class DefaultHandlers implements Handlers {
     private constructor() {}
@@ -19,10 +18,7 @@ export class DefaultHandlers implements Handlers {
     }
 
     // Should I separate handler for schema errors?
-    onErr(
-        err: unknown,
-        ctx: { req: Request; res: Response },
-    ): Promise<void> | void {
+    onErr(err: unknown, ctx: Context): Promise<void> | void {
         if (err instanceof HttpErr) {
             const { statusCode, message, body } = err;
             return void ctx.res.status(statusCode).json({
@@ -41,10 +37,7 @@ export class DefaultHandlers implements Handlers {
         throw new BadRequestErr(errData);
     }
 
-    onComplete(
-        output: unknown,
-        ctx: { req: Request; res: Response },
-    ): Promise<void> | void {
+    onComplete(output: unknown, ctx: Context): Promise<void> | void {
         if (output instanceof HttpResponse) {
             const { headers, body, statusCode } = output;
             for (const [key, value] of Object.entries(headers)) {
@@ -77,10 +70,7 @@ export class DefaultHandlers implements Handlers {
         }
     }
 
-    onUncaughtData(
-        data: unknown,
-        _: { req: Request; res: Response },
-    ): Promise<void> | void {
+    onUncaughtData(data: unknown, _: Context): Promise<void> | void {
         console.log(`Suvidha: UncaughtData ${JSON.stringify(data)}`);
     }
 }

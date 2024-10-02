@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
+import * as core from "express-serve-static-core";
 import { ZodError } from "zod";
 
-type Context = {
-    req: Request;
+export type Context<B = any, P = core.ParamsDictionary, Q = core.Query> = {
+    req: Request<P, any, B, Q>;
     res: Response;
 };
 

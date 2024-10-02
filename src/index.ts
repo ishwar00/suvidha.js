@@ -1,9 +1,13 @@
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { Response, Request } from "express";
 import * as core from "express-serve-static-core";
-import { Handlers } from "./Handlers";
+import { Context, Handlers } from "./Handlers";
 
-class Suvidha<B = any, P = core.ParamsDictionary, Q = core.Query> {
+export class Suvidha<
+    B extends any = any,
+    P extends core.ParamsDictionary = core.ParamsDictionary,
+    Q extends core.Query = core.Query,
+> {
     private bodySchema: z.ZodType<B> = z.any();
     private paramsSchema: z.ZodType<P> = z.any();
     private querySchema: z.ZodType<Q> = z.any();
@@ -35,12 +39,18 @@ class Suvidha<B = any, P = core.ParamsDictionary, Q = core.Query> {
         return this;
     }
 
-    parse(req: Readonly<Request>) {
-        const { body, params, query } = req;
-
-        this.bodySchema.parse(body);
-        this.querySchema.parse(query);
-        this.paramsSchema.parse(params);
+    async parse(ctx: Context) {
+        try {
+            const { body, params, query } = ctx.req;
+            ctx.req.body = this.bodySchema.parse(body);
+            ctx.req.query = this.querySchema.parse(query);
+            ctx.req.params = this.paramsSchema.parse(params);
+        } catch (err: unknown) {
+            if (err instanceof ZodError) {
+                await this.handlers.onSchemaErr(err, ctx);
+            }
+            // TODO: Handle this path with class asking for creating issue in GitHub
+        }
     }
 
     handler<R>(
@@ -50,11 +60,15 @@ class Suvidha<B = any, P = core.ParamsDictionary, Q = core.Query> {
             next: core.NextFunction,
         ) => R,
     ) {
-        return async (req: Request, res: Response, next: core.NextFunction) => {
+        return async (
+            req: Request<P, R, B, Q>,
+            res: Response,
+            next: core.NextFunction,
+        ) => {
             const ctx = { req, res };
             try {
-                this.parse(req);
-                const output = await handler(req as any, res, next);
+                await this.parse(ctx);
+                const output = await handler(req, res, next);
                 res.writableEnded
                     ? await this.handlers.onUncaughtData(output, ctx)
                     : await this.handlers.onComplete(output, ctx);
