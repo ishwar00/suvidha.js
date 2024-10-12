@@ -1,10 +1,12 @@
-import { getReasonPhrase, StatusCodes as HttpStatus } from "http-status-codes";
 import { ZodError } from "zod";
-import { InternalServerError } from "./http/serverErr";
-import { HttpErr } from "./http/HttpErr";
-import { BadRequestErr } from "./http/clientErr";
-import { HttpResponse } from "./http/HttpResponse";
-import { Context, Handlers } from "./Handlers";
+import { Connection, Handlers } from "./Handlers";
+import { isProtocol, Http, StatusCodes } from "./http";
+
+type ResonseFormat = {
+    status: "error" | "success" | "fail";
+    data: unknown;
+    meta?: unknown;
+};
 
 export class DefaultHandlers implements Handlers {
     private constructor() {}
@@ -17,40 +19,52 @@ export class DefaultHandlers implements Handlers {
         return new DefaultHandlers();
     }
 
-    onErr(err: unknown, ctx: Context): Promise<void> | void {
-        if (err instanceof HttpErr) {
-            const { statusCode, message, body } = err;
-            return void ctx.res.status(statusCode).json({
+    onErr(err: unknown, conn: Connection): Promise<void> | void {
+        if (err instanceof Http.End) {
+            const statusCode = err.getStatus();
+            return void conn.res.status(statusCode).json({
                 status: this.isClientErr(statusCode) ? "error" : "fail",
-                data: body ?? { message },
-            });
+                data: err.getBody(),
+                meta: err.getMeta(),
+            } satisfies ResonseFormat);
         }
 
-        const statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-        ctx.res.status(statusCode).json({
+        const statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
+        conn.res.status(statusCode).json({
             status: "fail",
-            data: getReasonPhrase(statusCode),
-        });
+            data: "Internal Server Error",
+            meta: {},
+        } satisfies ResonseFormat);
     }
 
     onSchemaErr(err: ZodError) {
-        const errData = {
-            message: "Data provided does not meet the required format.",
-            ...err.flatten(),
-        };
-        throw new BadRequestErr(errData);
+        throw Http.BadRequest.body(
+            "Data provided does not meet the required format.",
+        ).meta({
+            description: "Data Validation Error",
+            reason: err.flatten(),
+        });
     }
 
-    onComplete(output: unknown, ctx: Context): Promise<void> | void {
-        if (output instanceof HttpResponse) {
-            const { headers, body, statusCode } = output;
+    onComplete(output: unknown, conn: Connection): Promise<void> | void {
+        output =
+            isProtocol(output) && !(output instanceof Http.End)
+                ? new Http.End(output)
+                : output;
+
+        if (output instanceof Http.End) {
+            const headers = output.getHeaders();
+            const statusCode = output.getStatus();
+
             for (const [key, value] of Object.entries(headers)) {
-                ctx.res.setHeader(key, value);
+                conn.res.setHeader(key, value);
             }
-            return void ctx.res.status(statusCode).json({
+
+            return void conn.res.status(statusCode).json({
                 status: "success",
-                data: body,
-            });
+                data: output.getBody(),
+                meta: output.getMeta(),
+            } satisfies ResonseFormat);
         }
 
         switch (typeof output) {
@@ -59,22 +73,23 @@ export class DefaultHandlers implements Handlers {
             case "boolean":
             case "undefined":
             case "object": {
-                return void ctx.res.status(HttpStatus.OK).json({
+                return void conn.res.status(StatusCodes.OK).json({
                     status: "success",
                     data: output ?? null,
-                });
+                    meta: {},
+                } satisfies ResonseFormat);
             }
             default: {
                 const err = {
                     cause: output,
                     description: `Suvidha: Can't proccess values of type ${typeof output}.`,
                 };
-                throw new InternalServerError(err);
+                throw Http.InternalServerError.body(err);
             }
         }
     }
 
-    onUncaughtData(data: unknown, _: Context): Promise<void> | void {
+    onUncaughtData(data: unknown, _: Connection): Promise<void> | void {
         console.log(`Suvidha: UncaughtData ${JSON.stringify(data)}`);
     }
 }

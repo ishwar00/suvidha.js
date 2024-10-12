@@ -1,24 +1,96 @@
-# Suvidha
+<p align="center">
+  <h1 align="center">Suvidha</h1>
+</p>
 
-Supercharge your [Express.js](https://expressjs.com/) experience with type-safe, validated request handlers!
+# Why one more package?
 
-Suvidha is a TypeScript library that enhances Express.js by providing:
+I work with [typescript](https://www.typescriptlang.org/) and [Express.js](https://expressjs.com/) a lot. There were couple of things I wanted,
 
--   Type-safe request handling
--   Built-in request validation using [Zod](https://zod.dev/)
--   Standardize request-response cycle
+-   **Type-safe** request handling.
+-   Easy response handling.
+
+And I was not looking for a solution that will Hack over Express.js like [Nest.js](https://nestjs.com/).
+Something easy to plugin and unplug.
+
+# Hence Suvidha.
+
+Suvidha is a TypeScript library improves Express.js experience by providing:
+
+-   Type-safe request handling using [Zod](https://zod.dev/)
+-   Easy response handling
 
 ## Installation
 
 ```bash
 npm install @waffles-lab/suvidha
-# or
-yarn add @waffles-lab/suvidha
-# or
-pnpm add @waffles-lab/suvidha
 ```
 
 ## Quick Start
+
+1. Type-safe request handling.
+
+<details>
+
+```typescript
+import express, { NextFunction } from "express";
+import bodyParser from "body-parser";
+import { z, ZodError } from "zod";
+import { Pipe, StatusCodes, Connection } from "@waffles-lab/suvidha";
+
+export const app = express();
+
+// When validation fails, onSchemaErr is called
+const onSchemaErr = (err: ZodError, conn: Connection, next: NextFunction) => {
+    conn.res.status(StatusCodes.BAD_REQUEST).json({
+        status: "error",
+        data: "Data provided does not meet the required format.",
+        meta: {
+            reason: err.flatten(),
+        },
+    });
+};
+
+// Create a pipe factory
+const pipe = () => new Pipe(onSchemaErr); // onSchemaErr is optional
+
+app.use(bodyParser.json());
+
+const bookSchema = z.object({ name: z.string() });
+const bookId = z.object({ id: z.string() });
+
+app.post(
+    "/store/:id/books",
+    // create a middleware to validate the request
+    pipe()
+        .body(bookSchema)
+        .params(bookId)
+        .validate(),
+    // req is typed as Request<{ id: string }, any, { name: string }>
+    (req, res) => {
+        const { name } = req.body; // Type of body: { name: string }
+        const { id } = req.params; // Type of params: { id: string }
+        // do some stuff...
+        res.status(200).json({
+            data: {
+                message: "book created successfully",
+                book: {
+                    name,
+                    id,
+                },
+            },
+            status: "success",
+            meta: {},
+        });
+    },
+);
+
+app.listen(3000, () => console.log("Server running on port 3000"));
+```
+</details>
+
+2. Type-safe request handling and easy response handling.
+
+<details>
 
 ```typescript
 import express from "express";
@@ -28,24 +100,31 @@ import { Suvidha, DefaultHandlers } from "@waffles-lab/suvidha";
 const app = express();
 app.use(express.json());
 
-// Create a Suvidha instance
+// Create a Suvidha factory
 const suvidha = () => Suvidha.create(DefaultHandlers.create());
 
-// Define your schema
-const userSchema = z.object({
-    name: z.string(),
-    age: z.number().int().min(0),
-});
+const bookSchema = z.object({ name: z.string() });
+const bookId = z.object({ id: z.string() });
 
-// Create your route
 app.post(
-    "/users",
+    "/store/:id/books",
+    // validation is similar to pipe
     suvidha()
-        .body(userSchema)
-        .handler((req) => {
-            const { name, age } = req.body; // Fully typed! { name: string, age: number }
+        .body(bookSchema)
+        .params(bookId)
+        // req is typed as Request<{ id: string }, any, { name: string }>
+        .prayog((req, _) => {
+            const { name } = req.body; // Type of body: { name: string }
+            const { id } = req.params; // Type of params: { id: string }
+            // do some stuff...
+
+            // return the body, rest will be handled by default handlers
             return {
-                message: `Created user ${name} who is ${age} years old`,
+                message: "book created successfully",
+                book: {
+                    name,
+                    id,
+                },
             };
         }),
 );
@@ -53,67 +132,22 @@ app.post(
 app.listen(3000, () => console.log("Server running on port 3000"));
 ```
 
-# Features
+</details>
 
-## 1. Request Validation
+Both of the above examples produce the same output:
 
-Validate body, query parameters, and route parameters with [Zod](https://zod.dev/) schemas:
-
-```typescript
-const bodySchema = z.object({ name: z.string() });
-const querySchema = z.object({ filter: z.enum(["active", "inactive"]) });
-const paramsSchema = z.object({ id: z.string() });
-
-app.get(
-    "/users/:id",
-    suvidha()
-        .body(bodySchema)
-        .query(querySchema)
-        .params(paramsSchema)
-        .handler((req) => {
-            const { name } = req.body; // string
-            const { filter } = req.query; // 'active' | 'inactive'
-            const { id } = req.params; // string
-            // Your logic here
-
-            return { id, name, age: 45 };
-        }),
-);
-```
-
-## 2. Separate Handler Functions
-
-Define your handlers separately for better organization:
-
-```typescript
-import { Request } from "express";
-
-type UserBody = z.infer<typeof userSchema>;
-
-function createUser(req: Request<any, any, UserBody>) {
-    const { name, age } = req.body;
-    // Create user logic
-    return { id: 1, name, age };
-}
-
-app.post("/users", suvidha().body(userSchema).handler(createUser));
-```
-
-## 3. Built-in Error Handling
-
-```typescript
-import { NotFoundErr, BadRequestErr } from "@waffles-lab/suvidha";
-
-app.get(
-    "/users/:id",
-    suvidha().handler((req) => {
-        const user = findUser(req.params.id);
-        if (!user) {
-            throw new NotFoundErr("User not found"); // or BadRequestErr("User not found")
+```json
+{
+    "status": "success",
+    "data": {
+        "message": "book created successfully",
+        "book": {
+            "name": "foo",
+            "id": "bar"
         }
-        return user;
-    }),
-);
+    },
+    "meta": {}
+}
 ```
 
 ## Contributing
