@@ -128,6 +128,50 @@ Both of the above examples produce the same output:
 }
 ```
 
+## Glossary
+
+-   **Connection**: The connection object is an object that contains the request and response objects.
+
+    ```typescript
+    // simplified version
+    type Connection = {
+        req: Request;
+        res: Response;
+    };
+    ```
+
+-   **Handlers**: The handlers object is an object that contains the `onErr()`, `onSchemaErr()`, `onComplete()`, and `onUncaughtData()` functions.
+-   **Pipe**: The pipe is a middleware that validates the request, and calls `next()` if the validation succeeds.
+    Otherwise, it calls `onSchemaErr()` which is an optional callback function that you can define.
+
+## Let's talk about Pipe a bit
+
+If you just want to validate the request, you can use the pipe.
+
+**Pipe** is a middleware that validates the request, and calls `next()` if the validation succeeds.
+Otherwise, it calls `onSchemaErr()` which is an optional callback function that you can define.
+If you don't define it, validation errors will be passed to the `next()` as an argument, `next(err)`.
+
+```typescript
+// signature of onSchemaErr
+const onSchemaErr = (err: ZodError, conn: Connection, next: NextFunction) => {
+    // do something with the error ...
+};
+const bookSchema = z.object({ name: z.string() });
+
+// either pass onSchemaErr as an argument to `Pipe`
+const pipe = () => new Pipe(onSchemaErr);
+
+// you can also pass onSchemaErr as an argument to validate
+const validationMiddleware = pipe().body(bookSchema).validate(onSchemaErr);
+```
+
+Validation errors are passed to as follows:
+
+1. `onSchemaErr` of `vaildate` if supplied
+2. `onSchemaErr` of `Pipe` if supplied
+3. `next` of Express.js
+
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first
