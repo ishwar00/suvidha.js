@@ -19,25 +19,20 @@ Suvidha is a TypeScript library improves Express.js experience by providing:
 -   Type-safe request handling using [Zod](https://zod.dev/)
 -   Easy response handling
 
+![Suvidha's Flow](suvidha_flow.png "Suvidha Flow")
+
 ## Installation
 
 ```bash
 npm install @waffles-lab/suvidha
 ```
 
-## Quick Start
+## Ok show me the code
 
 1. Type-safe request handling.
 
-<details>
-
 ```typescript
-import express, { NextFunction } from "express";
-import bodyParser from "body-parser";
-import { z, ZodError } from "zod";
-import { Pipe, StatusCodes, Connection } from "@waffles-lab/suvidha";
-
-export const app = express();
+// examples/pipe/book.example.ts
 
 // When validation fails, onSchemaErr is called
 const onSchemaErr = (err: ZodError, conn: Connection, next: NextFunction) => {
@@ -52,8 +47,6 @@ const onSchemaErr = (err: ZodError, conn: Connection, next: NextFunction) => {
 
 // Create a pipe factory
 const pipe = () => new Pipe(onSchemaErr); // onSchemaErr is optional
-
-app.use(bodyParser.json());
 
 const bookSchema = z.object({ name: z.string() });
 const bookId = z.object({ id: z.string() });
@@ -83,22 +76,12 @@ app.post(
         });
     },
 );
-
-app.listen(3000, () => console.log("Server running on port 3000"));
 ```
-</details>
 
 2. Type-safe request handling and easy response handling.
 
-<details>
-
 ```typescript
-import express from "express";
-import { z } from "zod";
-import { Suvidha, DefaultHandlers } from "@waffles-lab/suvidha";
-
-const app = express();
-app.use(express.json());
+// examples/suvidha/book.example.ts
 
 // Create a Suvidha factory
 const suvidha = () => Suvidha.create(DefaultHandlers.create());
@@ -117,7 +100,6 @@ app.post(
             const { name } = req.body; // Type of body: { name: string }
             const { id } = req.params; // Type of params: { id: string }
             // do some stuff...
-
             // return the body, rest will be handled by default handlers
             return {
                 message: "book created successfully",
@@ -128,11 +110,7 @@ app.post(
             };
         }),
 );
-
-app.listen(3000, () => console.log("Server running on port 3000"));
 ```
-
-</details>
 
 Both of the above examples produce the same output:
 
