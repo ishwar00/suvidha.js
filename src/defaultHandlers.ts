@@ -20,6 +20,7 @@ export class DefaultHandlers implements Handlers {
     }
 
     onErr(err: unknown, conn: Connection): Promise<void> | void {
+        console.log(JSON.stringify(err));
         if (err instanceof Http.End) {
             const statusCode = err.getStatus();
             return void conn.res.status(statusCode).json({

@@ -67,7 +67,7 @@ export namespace Http {
 
     // 1xx Informational
     export class Continue extends End {
-        constructor(body: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Continue") {
             const protocol = {
                 body,
                 status: StatusCodes.CONTINUE,
@@ -81,7 +81,7 @@ export namespace Http {
     }
 
     export class SwitchingProtocols extends End {
-        constructor(body: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Switching Protocols") {
             const protocol = {
                 body,
                 status: StatusCodes.SWITCHING_PROTOCOLS,
@@ -95,7 +95,7 @@ export namespace Http {
     }
 
     export class Processing extends End {
-        constructor(body: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Processing") {
             const protocol = {
                 body,
                 status: StatusCodes.PROCESSING,
@@ -109,7 +109,7 @@ export namespace Http {
     }
 
     export class EarlyHints extends End {
-        constructor(body: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Early Hints") {
             const protocol = {
                 body,
                 status: StatusCodes.EARLY_HINTS,
@@ -121,7 +121,6 @@ export namespace Http {
             return new EarlyHints(_);
         }
     }
-
     // 2xx Success
     export class Ok extends End {
         constructor(body: Protocol["body"]) {
@@ -378,9 +377,9 @@ export namespace Http {
 
     // 4xx Client Error
     export class BadRequest extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Bad Request") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.BAD_REQUEST,
             };
             super(protocol);
@@ -392,9 +391,9 @@ export namespace Http {
     }
 
     export class Unauthorized extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Unauthorized") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.UNAUTHORIZED,
             };
             super(protocol);
@@ -406,9 +405,9 @@ export namespace Http {
     }
 
     export class PaymentRequired extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Payment Required") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.PAYMENT_REQUIRED,
             };
             super(protocol);
@@ -420,9 +419,9 @@ export namespace Http {
     }
 
     export class Forbidden extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Forbidden") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.FORBIDDEN,
             };
             super(protocol);
@@ -434,9 +433,9 @@ export namespace Http {
     }
 
     export class NotFound extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Not Found") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.NOT_FOUND,
             };
             super(protocol);
@@ -448,9 +447,9 @@ export namespace Http {
     }
 
     export class MethodNotAllowed extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Method Not Allowed") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.METHOD_NOT_ALLOWED,
             };
             super(protocol);
@@ -462,9 +461,9 @@ export namespace Http {
     }
 
     export class NotAcceptable extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Not Acceptable") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.NOT_ACCEPTABLE,
             };
             super(protocol);
@@ -476,9 +475,9 @@ export namespace Http {
     }
 
     export class ProxyAuthenticationRequired extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Proxy Authentication Required") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.PROXY_AUTHENTICATION_REQUIRED,
             };
             super(protocol);
@@ -490,9 +489,9 @@ export namespace Http {
     }
 
     export class RequestTimeout extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Request Timeout") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.REQUEST_TIMEOUT,
             };
             super(protocol);
@@ -504,9 +503,9 @@ export namespace Http {
     }
 
     export class Conflict extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Conflict") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.CONFLICT,
             };
             super(protocol);
@@ -518,9 +517,9 @@ export namespace Http {
     }
 
     export class Gone extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Gone") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.GONE,
             };
             super(protocol);
@@ -532,9 +531,9 @@ export namespace Http {
     }
 
     export class LengthRequired extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Length Required") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.LENGTH_REQUIRED,
             };
             super(protocol);
@@ -546,9 +545,9 @@ export namespace Http {
     }
 
     export class PreconditionFailed extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Precondition Failed") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.PRECONDITION_FAILED,
             };
             super(protocol);
@@ -560,9 +559,9 @@ export namespace Http {
     }
 
     export class PayloadTooLarge extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Payload Too Large") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.PAYLOAD_TOO_LARGE,
             };
             super(protocol);
@@ -574,9 +573,9 @@ export namespace Http {
     }
 
     export class UriTooLong extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "URI Too Long") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.URI_TOO_LONG,
             };
             super(protocol);
@@ -588,9 +587,9 @@ export namespace Http {
     }
 
     export class UnsupportedMediaType extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Unsupported Media Type") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.UNSUPPORTED_MEDIA_TYPE,
             };
             super(protocol);
@@ -602,9 +601,9 @@ export namespace Http {
     }
 
     export class RangeNotSatisfiable extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Range Not Satisfiable") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.RANGE_NOT_SATISFIABLE,
             };
             super(protocol);
@@ -616,9 +615,9 @@ export namespace Http {
     }
 
     export class ExpectationFailed extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Expectation Failed") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.EXPECTATION_FAILED,
             };
             super(protocol);
@@ -630,9 +629,9 @@ export namespace Http {
     }
 
     export class ImATeapot extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "I'm a Teapot") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.IM_A_TEAPOT,
             };
             super(protocol);
@@ -644,9 +643,9 @@ export namespace Http {
     }
 
     export class MisdirectedRequest extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Misdirected Request") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.MISDIRECTED_REQUEST,
             };
             super(protocol);
@@ -658,9 +657,9 @@ export namespace Http {
     }
 
     export class UnprocessableEntity extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Unprocessable Entity") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.UNPROCESSABLE_ENTITY,
             };
             super(protocol);
@@ -672,9 +671,9 @@ export namespace Http {
     }
 
     export class Locked extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Locked") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.LOCKED,
             };
             super(protocol);
@@ -686,9 +685,9 @@ export namespace Http {
     }
 
     export class FailedDependency extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Failed Dependency") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.FAILED_DEPENDENCY,
             };
             super(protocol);
@@ -700,9 +699,9 @@ export namespace Http {
     }
 
     export class TooEarly extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Too Early") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.TOO_EARLY,
             };
             super(protocol);
@@ -714,9 +713,9 @@ export namespace Http {
     }
 
     export class UpgradeRequired extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Upgrade Required") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.UPGRADE_REQUIRED,
             };
             super(protocol);
@@ -728,9 +727,9 @@ export namespace Http {
     }
 
     export class PreconditionRequired extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Precondition Required") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.PRECONDITION_REQUIRED,
             };
             super(protocol);
@@ -742,9 +741,9 @@ export namespace Http {
     }
 
     export class TooManyRequests extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Too Many Requests") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.TOO_MANY_REQUESTS,
             };
             super(protocol);
@@ -756,9 +755,11 @@ export namespace Http {
     }
 
     export class RequestHeaderFieldsTooLarge extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(
+            body: Protocol["body"] = "Request Header Fields Too Large",
+        ) {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.REQUEST_HEADER_FIELDS_TOO_LARGE,
             };
             super(protocol);
@@ -770,9 +771,9 @@ export namespace Http {
     }
 
     export class UnavailableForLegalReasons extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Unavailable for Legal Reasons") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.UNAVAILABLE_FOR_LEGAL_REASONS,
             };
             super(protocol);
@@ -785,9 +786,9 @@ export namespace Http {
 
     // 5xx Server Error
     export class InternalServerError extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Internal Server Error") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.INTERNAL_SERVER_ERROR,
             };
             super(protocol);
@@ -799,9 +800,9 @@ export namespace Http {
     }
 
     export class NotImplemented extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Not Implemented") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.NOT_IMPLEMENTED,
             };
             super(protocol);
@@ -813,9 +814,9 @@ export namespace Http {
     }
 
     export class BadGateway extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Bad Gateway") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.BAD_GATEWAY,
             };
             super(protocol);
@@ -827,9 +828,9 @@ export namespace Http {
     }
 
     export class ServiceUnavailable extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Service Unavailable") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.SERVICE_UNAVAILABLE,
             };
             super(protocol);
@@ -841,9 +842,9 @@ export namespace Http {
     }
 
     export class GatewayTimeout extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Gateway Timeout") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.GATEWAY_TIMEOUT,
             };
             super(protocol);
@@ -855,9 +856,9 @@ export namespace Http {
     }
 
     export class HttpVersionNotSupported extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "HTTP Version Not Supported") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.HTTP_VERSION_NOT_SUPPORTED,
             };
             super(protocol);
@@ -869,9 +870,9 @@ export namespace Http {
     }
 
     export class VariantAlsoNegotiates extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Variant Also Negotiates") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.VARIANT_ALSO_NEGOTIATES,
             };
             super(protocol);
@@ -883,9 +884,9 @@ export namespace Http {
     }
 
     export class InsufficientStorage extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Insufficient Storage") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.INSUFFICIENT_STORAGE,
             };
             super(protocol);
@@ -897,9 +898,9 @@ export namespace Http {
     }
 
     export class LoopDetected extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Loop Detected") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.LOOP_DETECTED,
             };
             super(protocol);
@@ -911,9 +912,9 @@ export namespace Http {
     }
 
     export class NotExtended extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Not Extended") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.NOT_EXTENDED,
             };
             super(protocol);
@@ -925,9 +926,11 @@ export namespace Http {
     }
 
     export class NetworkAuthenticationRequired extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(
+            body: Protocol["body"] = "Network Authentication Required",
+        ) {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.NETWORK_AUTHENTICATION_REQUIRED,
             };
             super(protocol);
@@ -940,9 +943,9 @@ export namespace Http {
 
     // Widely used non-standard codes (server-related)
     export class BandwidthLimitExceeded extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Bandwidth Limit Exceeded") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.BANDWIDTH_LIMIT_EXCEEDED,
             };
             super(protocol);
@@ -954,9 +957,9 @@ export namespace Http {
     }
 
     export class SiteIsOverloaded extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Site Is Overloaded") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.SITE_IS_OVERLOADED,
             };
             super(protocol);
@@ -968,9 +971,9 @@ export namespace Http {
     }
 
     export class SiteIsFrozen extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Site Is Frozen") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.SITE_IS_FROZEN,
             };
             super(protocol);
@@ -982,9 +985,9 @@ export namespace Http {
     }
 
     export class NetworkReadTimeoutError extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Network Read Timeout Error") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.NETWORK_READ_TIMEOUT_ERROR,
             };
             super(protocol);
@@ -996,9 +999,9 @@ export namespace Http {
     }
 
     export class NetworkConnectTimeoutError extends End {
-        constructor(protocolOrBody: Protocol["body"]) {
+        constructor(body: Protocol["body"] = "Network Connect Timeout Error") {
             const protocol = {
-                body: protocolOrBody,
+                body,
                 status: StatusCodes.NETWORK_CONNECT_TIMEOUT_ERROR,
             };
             super(protocol);
