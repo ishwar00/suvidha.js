@@ -54,10 +54,7 @@ const bookId = z.object({ id: z.string() });
 app.post(
     "/store/:id/books",
     // create a middleware to validate the request
-    pipe()
-        .body(bookSchema)
-        .params(bookId)
-        .validate(),
+    pipe().body(bookSchema).params(bookId).validate(),
     // req is typed as Request<{ id: string }, any, { name: string }>
     (req, res) => {
         const { name } = req.body; // Type of body: { name: string }
