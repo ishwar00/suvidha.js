@@ -27,7 +27,7 @@ Suvidha is a TypeScript library improves Express.js experience by providing:
 npm install @waffles-lab/suvidha
 ```
 
-## Ok show me the code
+## Okay Show Me the Code
 
 1. Type-safe request handling.
 
@@ -140,6 +140,8 @@ Both of the above examples produce the same output:
 -   **Handlers**: The handlers object is an object that contains the `onErr()`, `onSchemaErr()`, `onComplete()`, and `onUncaughtData()` functions.
 -   **Pipe**: The pipe is a middleware that validates the request, and calls `next()` if the validation succeeds.
     Otherwise, it calls `onSchemaErr()` which is an optional callback function that you can define.
+-   **Suvidha**: It's Hindi term for **Facility**.
+-   **Prayog**: It's Hindi term for **Use**.
 
 ## Let's talk about Pipe a bit
 
@@ -149,25 +151,40 @@ If you just want to validate the request, you can use the pipe.
 Otherwise, it calls `onSchemaErr()` which is an optional callback function that you can define.
 If you don't define it, validation errors will be passed to the `next()` as an argument, `next(err)`.
 
+### Usage and API
+
+**Pipe** is a class that you can create an instance of.
+It takes an optional argument to handle the validation errors.
+
+> NOTE: Generics are omitted for brevity.
+
 ```typescript
-// signature of onSchemaErr
-const onSchemaErr = (err: ZodError, conn: Connection, next: NextFunction) => {
-    // do something with the error ...
-};
-const bookSchema = z.object({ name: z.string() });
+type OnSchemaErr = (
+    err: ZodError,
+    conn: Connection,
+    next: NextFunction,
+) => void;
 
-// either pass onSchemaErr as an argument to `Pipe`
-const pipe = () => new Pipe(onSchemaErr);
-
-// you can also pass onSchemaErr as an argument to validate
-const validationMiddleware = pipe().body(bookSchema).validate(onSchemaErr);
+class Pipe {
+    constructor(onSchemaErr?: OnSchemaErr);
+}
 ```
 
-Validation errors are passed to as follows:
+First of all, you need to create a pipe factory and error handler.
 
-1. `onSchemaErr` of `vaildate` if supplied
-2. `onSchemaErr` of `Pipe` if supplied
-3. `next` of Express.js
+```typescript
+import { Pipe } from "@waffles-lab/suvidha";
+
+const onSchemaErr = (err: ZodError, conn: Connection, next: NextFunction) => {
+    conn.res.status(StatusCodes.BAD_REQUEST).json({
+        status: "error",
+        data: "Data provided does not meet the required format.",
+        meta: {},
+    });
+};
+
+const pipe = () => new Pipe(onSchemaErr);
+```
 
 ## Contributing
 

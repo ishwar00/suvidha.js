@@ -3,6 +3,7 @@ import bodyParser from "body-parser";
 import { Suvidha, DefaultHandlers } from "../../src";
 import { Book, BookSchema, Id, IdSchema } from "../schema";
 import { BooksController } from "./controller";
+import { setTimeout } from "timers/promises";
 
 export const suvidha = () => Suvidha.create(DefaultHandlers.create());
 export const app = express();
@@ -22,8 +23,16 @@ app.post(
     "/books",
     suvidha()
         .body(BookSchema)
+        .context(async (_) => {
+            await setTimeout(1000);
+            return {
+                name: "ishwar",
+                age: 30,
+            };
+        })
         .prayog(async (req, _) => {
             const book = req.body;
+            const { age, name } = req.context;
             return await books.create(book);
         }),
 );

@@ -7,7 +7,7 @@ export class BooksController {
 
     constructor() {}
 
-    private handleError(err: unknown) {
+    private handleError(err: unknown): never {
         if (err instanceof DuplicateBookError) {
             throw Http.Conflict.body({ message: err.message });
         }
