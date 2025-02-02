@@ -1,8 +1,10 @@
 import express, { Request } from "express";
 import bodyParser from "body-parser";
-import { Suvidha, DefaultHandlers } from "../../src";
+import { Suvidha, DefaultHandlers, Http } from "../../src";
 import { Book, BookSchema, Id, IdSchema } from "../schema";
 import { BooksController } from "./controller";
+import { Connection } from "../../src/Handlers";
+import { Context } from "../../src/suvidha";
 import { setTimeout } from "timers/promises";
 
 export const suvidha = () => Suvidha.create(DefaultHandlers.create());
@@ -19,21 +21,45 @@ app.get(
     }),
 );
 
+async function middlewareA<T extends Context>(conn: Connection<T>) {
+    const { context } = conn.req;
+    console.log("waiting for middleware A");
+    await setTimeout(5000);
+    console.log("middleware A done");
+    return {
+        ...context,
+        aStuff: {
+            a: 1,
+        },
+    };
+}
+
+async function middlewareB<T extends Context>(conn: Connection<T>) {
+    console.log("waiting for middleware B");
+    await setTimeout(1000);
+    console.log("middleware B done");
+
+    return {
+        bStuff: {
+            b: 2,
+        },
+    };
+}
+
 app.post(
     "/books",
     suvidha()
         .body(BookSchema)
-        .context(async (_) => {
-            await setTimeout(1000);
-            return {
-                name: "ishwar",
-                age: 30,
-            };
-        })
-        .prayog(async (req, _) => {
-            const book = req.body;
-            const { age, name } = req.context;
-            return await books.create(book);
+        .middleware(middlewareA)
+        .middleware(middlewareB)
+        .prayog(async (req) => {
+            const { name: bookName, author } = req.body;
+            console.log(req.context);
+            const {
+                bStuff: { b: _ },
+                aStuff: { a: __ },
+            } = req.context;
+            return await books.create({ name: bookName, author });
         }),
 );
 

@@ -3,7 +3,7 @@ import { Response, Request, NextFunction } from "express";
 import * as core from "express-serve-static-core";
 import { Connection, Handlers } from "./Handlers";
 
-interface ContextRequest<
+export interface ContextRequest<
     T extends Record<string, any>,
     R extends any,
     B extends any = any,
@@ -13,21 +13,39 @@ interface ContextRequest<
     context: T;
 }
 
-type TContext = Record<string | symbol, any>;
+export type Context = Record<string | symbol, any>;
+
+/**
+ * Returns the keys of T that are present in U
+ */
+export type CommonKeys<T, U> = keyof Filter<{
+    [P in keyof T]: P extends keyof U ? T[P] : never;
+}>;
+
+/**
+ * Filters out keys from T that are never
+ */
+export type Filter<T> = {
+    [P in keyof T as T[P] extends never ? never : P]: T[P];
+};
+
+export type Merge<T, U> = Omit<T, CommonKeys<T, U>> & U;
 
 export class Suvidha<
     B extends any = any,
     P extends core.ParamsDictionary = core.ParamsDictionary,
     Q extends core.Query = core.Query,
-    C extends TContext = {},
+    C extends Context = {},
     Built extends keyof Suvidha = never,
 > {
     private bodySchema: z.ZodType<B> = z.any();
     private paramsSchema: z.ZodType<P> = z.any();
     private querySchema: z.ZodType<Q> = z.any();
-    private contextHandler: (conn: Connection) => Promise<C> | C = () => {
-        return {} as any;
-    };
+    private middlewareHandlers: ((conn: Connection<any>) => any)[] = [
+        () => {
+            return {};
+        },
+    ];
 
     constructor(private readonly handlers: Handlers) {}
 
@@ -56,11 +74,12 @@ export class Suvidha<
         return this;
     }
 
-    context<T extends C>(
-        fn: (conn: Connection) => Promise<T> | T,
-    ): Omit<Suvidha<B, P, Q, T, Built>, Built | "context"> {
-        this.contextHandler = fn;
-        return this as unknown as Suvidha<B, P, Q, T, Built>;
+    middleware<T extends Context>(
+        fn: (conn: Connection<C>) => Promise<T> | T,
+    ): Omit<Suvidha<B, P, Q, Merge<C, T>, Built>, Built | "context"> {
+        this.middlewareHandlers.push(fn);
+        // This cast is required to cast T to C, which are incompatible types
+        return this as unknown as Suvidha<B, P, Q, Merge<C, T>, Built>;
     }
 
     private async parse(conn: Connection, next: NextFunction) {
@@ -80,7 +99,7 @@ export class Suvidha<
         }
     }
 
-    private _assertRquestConetext<R>(
+    private _assertRequestContext<R>(
         req: any,
     ): asserts req is ContextRequest<C, R, B, P, Q> {
         (req as ContextRequest<{}, R, B, P, Q>).context = {};
@@ -98,12 +117,19 @@ export class Suvidha<
             res: Response,
             next: core.NextFunction,
         ) => {
+            this._assertRequestContext(req);
             const conn = { req, res };
             try {
                 await this.parse(conn, next);
-                this._assertRquestConetext(req);
-                req.context = await this.contextHandler(conn);
+
+                let context = {};
+                for (const middleware of this.middlewareHandlers) {
+                    context = { ...context, ...(await middleware(conn)) };
+                }
+                req.context = context as C;
+
                 const output = await handler(req, res, next);
+
                 res.writableEnded
                     ? await this.handlers.onUncaughtData(output, conn, next)
                     : await this.handlers.onComplete(output, conn, next);
