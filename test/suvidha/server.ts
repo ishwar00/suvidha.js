@@ -1,6 +1,6 @@
 import express, { Request } from "express";
 import bodyParser from "body-parser";
-import { Suvidha, DefaultHandlers, Http } from "../../src";
+import { Suvidha, DefaultHandlers } from "../../src";
 import { Book, BookSchema, Id, IdSchema } from "../schema";
 import { BooksController } from "./controller";
 import { Connection } from "../../src/Handlers";
@@ -50,8 +50,8 @@ app.post(
     "/books",
     suvidha()
         .body(BookSchema)
-        .middleware(middlewareA)
-        .middleware(middlewareB)
+        .use(middlewareA)
+        .use(middlewareB)
         .prayog(async (req) => {
             const { name: bookName, author } = req.body;
             console.log(req.context);

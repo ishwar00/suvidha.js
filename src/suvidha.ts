@@ -29,6 +29,9 @@ export type Filter<T> = {
     [P in keyof T as T[P] extends never ? never : P]: T[P];
 };
 
+/**
+ * Merges two types just like spread operator
+ */
 export type Merge<T, U> = Omit<T, CommonKeys<T, U>> & U;
 
 export class Suvidha<
@@ -41,13 +44,9 @@ export class Suvidha<
     private bodySchema: z.ZodType<B> = z.any();
     private paramsSchema: z.ZodType<P> = z.any();
     private querySchema: z.ZodType<Q> = z.any();
-    private middlewareHandlers: ((conn: Connection<any>) => any)[] = [
-        () => {
-            return {};
-        },
-    ];
+    private useHandlers: ((conn: Connection<any>) => any)[] = [];
 
-    constructor(private readonly handlers: Handlers) {}
+    constructor(private readonly handlers: Handlers) { }
 
     static create(handlers: Handlers) {
         return new Suvidha(handlers);
@@ -74,10 +73,10 @@ export class Suvidha<
         return this;
     }
 
-    middleware<T extends Context>(
+    use<T extends Context>(
         fn: (conn: Connection<C>) => Promise<T> | T,
     ): Omit<Suvidha<B, P, Q, Merge<C, T>, Built>, Built | "context"> {
-        this.middlewareHandlers.push(fn);
+        this.useHandlers.push(fn);
         // This cast is required to cast T to C, which are incompatible types
         return this as unknown as Suvidha<B, P, Q, Merge<C, T>, Built>;
     }
@@ -91,15 +90,16 @@ export class Suvidha<
         } catch (err: unknown) {
             if (err instanceof ZodError) {
                 await this.handlers.onSchemaErr(err, conn, next);
+                return;
             }
             throw Error(
                 "This is not a ZodError, something is wrong. Please report this issue." +
-                    `\n === Raw Error Dump ===\n ${err}`,
+                `\n === Raw Error Dump ===\n ${err}`,
             );
         }
     }
 
-    private _assertRequestContext<R>(
+    private initializeContext<R>(
         req: any,
     ): asserts req is ContextRequest<C, R, B, P, Q> {
         (req as ContextRequest<{}, R, B, P, Q>).context = {};
@@ -117,14 +117,14 @@ export class Suvidha<
             res: Response,
             next: core.NextFunction,
         ) => {
-            this._assertRequestContext(req);
+            this.initializeContext(req);
             const conn = { req, res };
             try {
                 await this.parse(conn, next);
 
                 let context = {};
-                for (const middleware of this.middlewareHandlers) {
-                    context = { ...context, ...(await middleware(conn)) };
+                for (const useFn of this.useHandlers) {
+                    context = { ...context, ...(await useFn(conn)) };
                 }
                 req.context = context as C;
 
