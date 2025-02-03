@@ -5,10 +5,10 @@ import { ContextRequest } from "./suvidha";
 
 export type Connection<
     Ctx extends Record<string, any> = {},
-    Reply extends any = any,
     Body = any,
     Params extends core.ParamsDictionary = core.ParamsDictionary,
     Query extends core.Query = core.Query,
+    Reply extends any = any,
 > = {
     req: ContextRequest<Ctx, Reply, Body, Params, Query>;
     res: Response;
@@ -34,7 +34,7 @@ export interface Handlers {
         next: NextFunction,
     ): Promise<void> | void;
 
-    onUncaughtData(
+    onDualResponseDetected(
         data: unknown,
         conn: Connection,
         next: NextFunction,

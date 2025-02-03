@@ -1,6 +1,6 @@
 import express, { Request } from "express";
 import bodyParser from "body-parser";
-import { Suvidha, DefaultHandlers } from "../../src";
+import { Suvidha, DefaultHandlers, Http } from "../../src";
 import { Book, BookSchema, Id, IdSchema } from "../schema";
 import { BooksController } from "./controller";
 import { Connection } from "../../src/Handlers";
@@ -50,15 +50,31 @@ app.post(
     "/books",
     suvidha()
         .body(BookSchema)
-        .use(middlewareA)
-        .use(middlewareB)
+        .use((_) => {
+            return {
+                user: {
+                    name: "ishwar",
+                },
+                stuff: {
+                    a: 1,
+                },
+                role: "admin",
+            };
+        })
+        .use((conn) => {
+            const { context } = conn.req;
+            if (context.role !== "admin") {
+                throw new Http.Unauthorized();
+            }
+
+            return {
+                access: "granted",
+                stuff: 3,
+            } as const;
+        })
         .prayog(async (req) => {
             const { name: bookName, author } = req.body;
-            console.log(req.context);
-            const {
-                bStuff: { b: _ },
-                aStuff: { a: __ },
-            } = req.context;
+            const { } = req.context;
             return await books.create({ name: bookName, author });
         }),
 );

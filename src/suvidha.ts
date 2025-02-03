@@ -44,7 +44,7 @@ export class Suvidha<
     private bodySchema: z.ZodType<B> = z.any();
     private paramsSchema: z.ZodType<P> = z.any();
     private querySchema: z.ZodType<Q> = z.any();
-    private useHandlers: ((conn: Connection<any>) => any)[] = [];
+    private useHandlers: ((conn: Connection<any, B, P, Q>) => any)[] = [];
 
     constructor(private readonly handlers: Handlers) { }
 
@@ -74,11 +74,17 @@ export class Suvidha<
     }
 
     use<T extends Context>(
-        fn: (conn: Connection<C>) => Promise<T> | T,
-    ): Omit<Suvidha<B, P, Q, Merge<C, T>, Built>, Built | "context"> {
+        fn: (
+            conn: Connection<
+                Readonly<C>,
+                Readonly<B>,
+                Readonly<P>,
+                Readonly<Q>
+            >,
+        ) => Promise<T> | T,
+    ) {
         this.useHandlers.push(fn);
-        // This cast is required to cast T to C, which are incompatible types
-        return this as unknown as Suvidha<B, P, Q, Merge<C, T>, Built>;
+        return this as Suvidha<B, P, Q, Merge<C, T>, Built>;
     }
 
     private async parse(conn: Connection, next: NextFunction) {
@@ -130,12 +136,24 @@ export class Suvidha<
 
                 const output = await handler(req, res, next);
 
-                res.writableEnded
-                    ? await this.handlers.onUncaughtData(output, conn, next)
-                    : await this.handlers.onComplete(output, conn, next);
+                if (res.writableEnded) {
+                    if (output !== undefined) {
+                        await this.handlers.onDualResponseDetected(
+                            output,
+                            conn,
+                            next,
+                        );
+                    }
+                    return;
+                }
+                await this.handlers.onComplete(output, conn, next);
             } catch (err: unknown) {
                 res.writableEnded
-                    ? await this.handlers.onUncaughtData(err, conn, next)
+                    ? await this.handlers.onDualResponseDetected(
+                        err,
+                        conn,
+                        next,
+                    )
                     : await this.handlers.onErr(err, conn, next);
             }
         };

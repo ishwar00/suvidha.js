@@ -9,7 +9,7 @@ type ResonseFormat = {
 };
 
 export class DefaultHandlers implements Handlers {
-    private constructor() {}
+    private constructor() { }
 
     private isClientErr(statusCode: number) {
         return statusCode >= 400 && statusCode < 500;
@@ -90,7 +90,7 @@ export class DefaultHandlers implements Handlers {
         }
     }
 
-    onUncaughtData(data: unknown, _: Connection): Promise<void> | void {
+    onDualResponseDetected(data: unknown, _: Connection): Promise<void> | void {
         console.log(`Suvidha: UncaughtData ${JSON.stringify(data)}`);
     }
 }
