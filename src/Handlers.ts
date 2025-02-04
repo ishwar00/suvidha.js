@@ -1,13 +1,12 @@
 import { NextFunction, Response } from "express";
-import * as core from "express-serve-static-core";
 import { ZodError } from "zod";
 import { ContextRequest } from "./suvidha";
 
 export type Connection<
     Ctx extends Record<string, any> = {},
     Body = any,
-    Params extends core.ParamsDictionary = core.ParamsDictionary,
-    Query extends core.Query = core.Query,
+    Params extends Record<string, any> = Record<string, any>,
+    Query extends Record<string, any> = Record<string, any>,
     Reply extends any = any,
 > = {
     req: ContextRequest<Ctx, Reply, Body, Params, Query>;

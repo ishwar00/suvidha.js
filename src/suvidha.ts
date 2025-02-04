@@ -7,7 +7,7 @@ export interface ContextRequest<
     T extends Record<string, any>,
     R extends any,
     B extends any = any,
-    P extends core.ParamsDictionary = core.ParamsDictionary,
+    P extends Record<string, any> = Record<string, any>,
     Q extends core.Query = core.Query,
 > extends Request<P, R, B, Q> {
     context: T;
@@ -32,7 +32,14 @@ export type Filter<T> = {
 /**
  * Merges two types just like spread operator
  */
-export type Merge<T, U> = Omit<T, CommonKeys<T, U>> & U;
+export type Merge<T, U> = Compute<Omit<T, CommonKeys<T, U>> & U>;
+
+/**
+ * Force TS to resolve composed types
+ * Use Case: for display purpose, we want to show all the properties of a type
+ * ref: https://github.com/microsoft/vscode/issues/94679#issuecomment-755194161
+ */
+type Compute<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
 
 export class Suvidha<
     B extends any = any,
@@ -46,7 +53,7 @@ export class Suvidha<
     private querySchema: z.ZodType<Q> = z.any();
     private useHandlers: ((conn: Connection<any, B, P, Q>) => any)[] = [];
 
-    constructor(private readonly handlers: Handlers) { }
+    constructor(private readonly handlers: Handlers) {}
 
     static create(handlers: Handlers) {
         return new Suvidha(handlers);
@@ -84,7 +91,11 @@ export class Suvidha<
         ) => Promise<T> | T,
     ) {
         this.useHandlers.push(fn);
-        return this as Suvidha<B, P, Q, Merge<C, T>, Built>;
+        /**
+         * This wild cast is required because C and Merge<C, T> are not necessarily
+         * the subtype of each other.
+         */
+        return this as any as Suvidha<B, P, Q, Merge<C, T>, Built>;
     }
 
     private async parse(conn: Connection, next: NextFunction) {
@@ -100,7 +111,7 @@ export class Suvidha<
             }
             throw Error(
                 "This is not a ZodError, something is wrong. Please report this issue." +
-                `\n === Raw Error Dump ===\n ${err}`,
+                    `\n === Raw Error Dump ===\n ${err}`,
             );
         }
     }
@@ -111,19 +122,19 @@ export class Suvidha<
         (req as ContextRequest<{}, R, B, P, Q>).context = {};
     }
 
-    prayog<R>(
+    handler<Reply>(
         handler: (
-            req: ContextRequest<C, R, B, P, Q>,
+            req: ContextRequest<C, Reply, B, P, Q>,
             res: Response,
             next: core.NextFunction,
-        ) => R,
+        ) => Reply,
     ) {
         return async (
-            req: Request<P, R, B, Q>,
+            req: Request<P, Reply, B, Q>,
             res: Response,
             next: core.NextFunction,
         ) => {
-            this.initializeContext(req);
+            this.initializeContext<Reply>(req);
             const conn = { req, res };
             try {
                 await this.parse(conn, next);
@@ -150,10 +161,10 @@ export class Suvidha<
             } catch (err: unknown) {
                 res.writableEnded
                     ? await this.handlers.onDualResponseDetected(
-                        err,
-                        conn,
-                        next,
-                    )
+                          err,
+                          conn,
+                          next,
+                      )
                     : await this.handlers.onErr(err, conn, next);
             }
         };

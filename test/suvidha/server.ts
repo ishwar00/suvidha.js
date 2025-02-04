@@ -16,23 +16,22 @@ const books = new BooksController();
 
 app.get(
     "/books",
-    suvidha().prayog(() => {
+    suvidha().handler(() => {
         return books.get();
     }),
 );
 
 async function middlewareA<T extends Context>(conn: Connection<T>) {
-    const { context } = conn.req;
+    const { req } = conn;
     await setTimeout(500);
     return {
-        ...context,
         aStuff: {
             a: 1,
         },
     };
 }
 
-async function middlewareB<T extends Context>(conn: Connection<T>) {
+async function middlewareB<const T extends Context>(_: Connection<T>) {
     return {
         bStuff: {
             b: 2,
@@ -46,7 +45,7 @@ app.post(
         .body(BookSchema)
         .use(middlewareA)
         .use(middlewareB)
-        .prayog(async (req) => {
+        .handler(async (req) => {
             const { name: bookName, author } = req.body;
             const {
                 bStuff: { b: _ },
@@ -64,14 +63,14 @@ async function updateBook(req: Request<Id, any, Book>) {
 
 app.put(
     "/books/:id",
-    suvidha().body(BookSchema).params(IdSchema).prayog(updateBook),
+    suvidha().body(BookSchema).params(IdSchema).handler(updateBook),
 );
 
 app.delete(
     "/books/:id",
     suvidha()
         .params(IdSchema)
-        .prayog(async (req, _) => {
+        .handler(async (req, _) => {
             const { id } = req.params;
 
             return await books.delete(id);
