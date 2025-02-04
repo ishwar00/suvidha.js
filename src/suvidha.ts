@@ -53,7 +53,7 @@ export class Suvidha<
     private querySchema: z.ZodType<Q> = z.any();
     private useHandlers: ((conn: Connection<any, B, P, Q>) => any)[] = [];
 
-    constructor(private readonly handlers: Handlers) {}
+    constructor(private readonly handlers: Handlers) { }
 
     static create(handlers: Handlers) {
         return new Suvidha(handlers);
@@ -81,14 +81,7 @@ export class Suvidha<
     }
 
     use<T extends Context>(
-        fn: (
-            conn: Connection<
-                Readonly<C>,
-                Readonly<B>,
-                Readonly<P>,
-                Readonly<Q>
-            >,
-        ) => Promise<T> | T,
+        fn: (conn: Connection<C, B, P, Q>) => Promise<T> | T,
     ) {
         this.useHandlers.push(fn);
         /**
@@ -98,7 +91,7 @@ export class Suvidha<
         return this as any as Suvidha<B, P, Q, Merge<C, T>, Built>;
     }
 
-    private async parse(conn: Connection, next: NextFunction) {
+    private async parse(conn: Connection) {
         try {
             const { body, params, query } = conn.req;
             conn.req.body = this.bodySchema.parse(body);
@@ -106,13 +99,9 @@ export class Suvidha<
             conn.req.params = this.paramsSchema.parse(params);
         } catch (err: unknown) {
             if (err instanceof ZodError) {
-                await this.handlers.onSchemaErr(err, conn, next);
-                return;
+                await this.handlers.onSchemaErr(err, conn);
             }
-            throw Error(
-                "This is not a ZodError, something is wrong. Please report this issue." +
-                    `\n === Raw Error Dump ===\n ${err}`,
-            );
+            throw err;
         }
     }
 
@@ -124,7 +113,13 @@ export class Suvidha<
 
     handler<Reply>(
         handler: (
-            req: ContextRequest<C, Reply, B, P, Q>,
+            req: ContextRequest<
+                Readonly<C>,
+                Reply,
+                Readonly<B>,
+                Readonly<P>,
+                Readonly<Q>
+            >,
             res: Response,
             next: core.NextFunction,
         ) => Reply,
@@ -137,7 +132,7 @@ export class Suvidha<
             this.initializeContext<Reply>(req);
             const conn = { req, res };
             try {
-                await this.parse(conn, next);
+                await this.parse(conn);
 
                 let context = {};
                 for (const useFn of this.useHandlers) {
@@ -147,7 +142,7 @@ export class Suvidha<
 
                 const output = await handler(req, res, next);
 
-                if (res.writableEnded) {
+                if (res.headersSent) {
                     if (output !== undefined) {
                         await this.handlers.onDualResponseDetected(
                             output,
@@ -159,12 +154,12 @@ export class Suvidha<
                 }
                 await this.handlers.onComplete(output, conn, next);
             } catch (err: unknown) {
-                res.writableEnded
+                res.headersSent
                     ? await this.handlers.onDualResponseDetected(
-                          err,
-                          conn,
-                          next,
-                      )
+                        err,
+                        conn,
+                        next,
+                    )
                     : await this.handlers.onErr(err, conn, next);
             }
         };

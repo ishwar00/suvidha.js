@@ -9,7 +9,7 @@ type ResonseFormat = {
 };
 
 export class DefaultHandlers implements Handlers {
-    private constructor() { }
+    private constructor() {}
 
     private isClientErr(statusCode: number) {
         return statusCode >= 400 && statusCode < 500;
@@ -38,7 +38,7 @@ export class DefaultHandlers implements Handlers {
         } satisfies ResonseFormat);
     }
 
-    onSchemaErr(err: ZodError) {
+    onSchemaErr(err: ZodError): never {
         throw Http.BadRequest.body(
             "Data provided does not meet the required format.",
         ).meta({

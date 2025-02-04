@@ -6,6 +6,7 @@ import { BooksController } from "./controller";
 import { Connection } from "../../src/Handlers";
 import { Context } from "../../src/suvidha";
 import { setTimeout } from "timers/promises";
+import { z } from "zod";
 
 export const suvidha = () => Suvidha.create(DefaultHandlers.create());
 export const app = express();
@@ -15,14 +16,18 @@ app.use(bodyParser.json());
 const books = new BooksController();
 
 app.get(
+    "/",
+    suvidha().handler(() => "Hello World"),
+);
+
+app.get(
     "/books",
     suvidha().handler(() => {
         return books.get();
     }),
 );
 
-async function middlewareA<T extends Context>(conn: Connection<T>) {
-    const { req } = conn;
+async function middlewareA<T extends Context>(_: Connection<T>) {
     await setTimeout(500);
     return {
         aStuff: {
@@ -31,12 +36,8 @@ async function middlewareA<T extends Context>(conn: Connection<T>) {
     };
 }
 
-async function middlewareB<const T extends Context>(_: Connection<T>) {
-    return {
-        bStuff: {
-            b: 2,
-        },
-    };
+function middlewareB<T extends Connection>(conn: T): T["req"]["body"] {
+    return conn.req.body;
 }
 
 app.post(
@@ -45,13 +46,19 @@ app.post(
         .body(BookSchema)
         .use(middlewareA)
         .use(middlewareB)
+        .use((conn) => {
+            const { body, query, params } = conn.req;
+            return {
+                body,
+                query,
+                params,
+            };
+        })
         .handler(async (req) => {
-            const { name: bookName, author } = req.body;
             const {
-                bStuff: { b: _ },
-                aStuff: { a: __ },
+                aStuff: { a: _ },
             } = req.context;
-            return await books.create({ name: bookName, author });
+            return books.create(req.body);
         }),
 );
 

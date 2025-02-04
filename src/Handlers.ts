@@ -21,11 +21,7 @@ export interface Handlers {
         next: NextFunction,
     ): Promise<void> | void;
 
-    onSchemaErr(
-        err: ZodError,
-        conn: Connection,
-        next: NextFunction,
-    ): Promise<void> | void;
+    onSchemaErr(err: ZodError, conn: Connection): Promise<never> | never;
 
     onComplete(
         output: unknown,
