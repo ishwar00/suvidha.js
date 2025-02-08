@@ -1,12 +1,11 @@
 import express, { Request } from "express";
 import bodyParser from "body-parser";
-import { Suvidha, DefaultHandlers } from "../../src";
+import { Suvidha, DefaultHandlers, Http } from "../../src";
 import { Book, BookSchema, Id, IdSchema } from "../schema";
 import { BooksController } from "./controller";
 import { Connection } from "../../src/Handlers";
 import { Context } from "../../src/suvidha";
 import { setTimeout } from "timers/promises";
-import { z } from "zod";
 
 export const suvidha = () => Suvidha.create(DefaultHandlers.create());
 export const app = express();
@@ -30,14 +29,19 @@ app.get(
 async function middlewareA<T extends Context>(_: Connection<T>) {
     await setTimeout(500);
     return {
-        aStuff: {
-            a: 1,
+        foo: {
+            bar: {
+                harshit: "harshit",
+            },
         },
     };
 }
 
-function middlewareB<T extends Connection>(conn: T): T["req"]["body"] {
-    return conn.req.body;
+function middlewareB<T extends Connection>(_: T) {
+    return {
+        role: "admin",
+        user: "ishwar",
+    };
 }
 
 app.post(
@@ -47,16 +51,16 @@ app.post(
         .use(middlewareA)
         .use(middlewareB)
         .use((conn) => {
-            const { body, query, params } = conn.req;
-            return {
-                body,
-                query,
-                params,
-            };
+            if (conn.req.context.role !== "admin") {
+                throw new Http.Unauthorized();
+            }
+            return {};
         })
         .handler(async (req) => {
             const {
-                aStuff: { a: _ },
+                foo: {
+                    bar: { harshit: _ },
+                },
             } = req.context;
             return books.create(req.body);
         }),

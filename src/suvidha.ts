@@ -1,7 +1,8 @@
 import { z, ZodError } from "zod";
-import { Response, Request, NextFunction } from "express";
+import { Response, Request } from "express";
 import * as core from "express-serve-static-core";
 import { Connection, Handlers } from "./Handlers";
+import { _Readonly, Merge } from "./utils.type";
 
 export interface ContextRequest<
     T extends Record<string, any>,
@@ -15,32 +16,6 @@ export interface ContextRequest<
 
 export type Context = Record<string | symbol, any>;
 
-/**
- * Returns the keys of T that are present in U
- */
-export type CommonKeys<T, U> = keyof Filter<{
-    [P in keyof T]: P extends keyof U ? T[P] : never;
-}>;
-
-/**
- * Filters out keys from T that are never
- */
-export type Filter<T> = {
-    [P in keyof T as T[P] extends never ? never : P]: T[P];
-};
-
-/**
- * Merges two types just like spread operator
- */
-export type Merge<T, U> = Compute<Omit<T, CommonKeys<T, U>> & U>;
-
-/**
- * Force TS to resolve composed types
- * Use Case: for display purpose, we want to show all the properties of a type
- * ref: https://github.com/microsoft/vscode/issues/94679#issuecomment-755194161
- */
-type Compute<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
-
 export class Suvidha<
     B extends any = any,
     P extends core.ParamsDictionary = core.ParamsDictionary,
@@ -51,9 +26,9 @@ export class Suvidha<
     private bodySchema: z.ZodType<B> = z.any();
     private paramsSchema: z.ZodType<P> = z.any();
     private querySchema: z.ZodType<Q> = z.any();
-    private useHandlers: ((conn: Connection<any, B, P, Q>) => any)[] = [];
+    private useHandlers: ((conn: Connection<any, any, any, any>) => any)[] = [];
 
-    constructor(private readonly handlers: Handlers) { }
+    constructor(private readonly handlers: Handlers) {}
 
     static create(handlers: Handlers) {
         return new Suvidha(handlers);
@@ -81,7 +56,14 @@ export class Suvidha<
     }
 
     use<T extends Context>(
-        fn: (conn: Connection<C, B, P, Q>) => Promise<T> | T,
+        fn: (
+            conn: Connection<
+                _Readonly<C>,
+                _Readonly<B>,
+                _Readonly<P>,
+                _Readonly<Q>
+            >,
+        ) => Promise<T> | T,
     ) {
         this.useHandlers.push(fn);
         /**
@@ -107,18 +89,24 @@ export class Suvidha<
 
     private initializeContext<R>(
         req: any,
-    ): asserts req is ContextRequest<C, R, B, P, Q> {
+    ): asserts req is ContextRequest<
+        _Readonly<C>,
+        R,
+        _Readonly<B>,
+        _Readonly<P>,
+        _Readonly<Q>
+    > {
         (req as ContextRequest<{}, R, B, P, Q>).context = {};
     }
 
     handler<Reply>(
         handler: (
             req: ContextRequest<
-                Readonly<C>,
+                _Readonly<C>,
                 Reply,
-                Readonly<B>,
-                Readonly<P>,
-                Readonly<Q>
+                _Readonly<B>,
+                _Readonly<P>,
+                _Readonly<Q>
             >,
             res: Response,
             next: core.NextFunction,
@@ -134,11 +122,12 @@ export class Suvidha<
             try {
                 await this.parse(conn);
 
-                let context = {};
                 for (const useFn of this.useHandlers) {
-                    context = { ...context, ...(await useFn(conn)) };
+                    conn.req.context = {
+                        ...conn.req.context,
+                        ...(await useFn(conn)),
+                    };
                 }
-                req.context = context as C;
 
                 const output = await handler(req, res, next);
 
@@ -156,10 +145,10 @@ export class Suvidha<
             } catch (err: unknown) {
                 res.headersSent
                     ? await this.handlers.onDualResponseDetected(
-                        err,
-                        conn,
-                        next,
-                    )
+                          err,
+                          conn,
+                          next,
+                      )
                     : await this.handlers.onErr(err, conn, next);
             }
         };
