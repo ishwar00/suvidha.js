@@ -123,9 +123,7 @@ export class Suvidha<
             res: Response,
             next: core.NextFunction,
         ) => Reply,
-    ) {
-        // TODO: return typed express handler
-        // this will help if someone wants to add post response hook
+    ): core.RequestHandler<P, Reply, B, Q> {
         return async (
             req: Request<P, Reply, B, Q>,
             res: Response,
