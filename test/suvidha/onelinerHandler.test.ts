@@ -10,6 +10,8 @@ describe("Suvidha Library", () => {
     let app: express.Express;
     let mockHandlers: jest.Mocked<Handlers>;
 
+    class UnreachableErr extends Error { }
+
     beforeEach(() => {
         app = express();
         app.use(express.json());
@@ -23,12 +25,18 @@ describe("Suvidha Library", () => {
                 conn.res.status(200).json(output);
             }),
             onErr: jest.fn().mockImplementation((err, conn, _) => {
+                if (err instanceof UnreachableErr) {
+                    throw err;
+                }
                 conn.res.status(500).json({ error: err.message });
             }),
             onDualResponseDetected: jest
                 .fn()
                 .mockImplementation((_errOrOutput, _) => {
                     console.warn("Dual response detected: ", _errOrOutput);
+                    if (_errOrOutput instanceof UnreachableErr) {
+                        throw _errOrOutput;
+                    }
                     return _errOrOutput;
                 }),
         };
@@ -58,7 +66,10 @@ describe("Suvidha Library", () => {
                 "/test",
                 suvidha()
                     .body(z.object({ name: z.string() }))
-                    .handler((req, _) => ({ received: req.body.name })),
+                    .handler(() => {
+                        // Must not reach here
+                        throw new UnreachableErr();
+                    }),
             );
 
             const response = await request(app)
@@ -69,8 +80,6 @@ describe("Suvidha Library", () => {
             expect(response.body.errors).toBeDefined();
             expect(mockHandlers.onSchemaErr).toHaveBeenCalled();
         });
-
-        // Similar tests for params and query...
     });
 
     describe("Middleware Context", () => {
@@ -85,6 +94,28 @@ describe("Suvidha Library", () => {
 
             const response = await request(app).get("/test").expect(200);
             expect(response.body).toEqual({ user: "alice", role: "admin" });
+        });
+
+        it("middleware completes the response", async () => {
+            app.get(
+                "/test",
+                suvidha()
+                    .use(() => {
+                        return { role: "user" };
+                    })
+                    .use((conn) => {
+                        if (conn.req.context.role !== "admin") {
+                            conn.res.status(403).json(conn.req.context);
+                        }
+                        return {};
+                    })
+                    .handler(() => {
+                        throw new UnreachableErr();
+                    }),
+            );
+
+            const response = await request(app).get("/test").expect(403);
+            expect(response.body).toEqual({ role: "user" });
         });
 
         it("handles async middleware", async () => {
@@ -150,7 +181,7 @@ describe("Suvidha Library", () => {
         it("handles errors after response sent", async () => {
             app.get(
                 "/test",
-                suvidha().handler((req, res) => {
+                suvidha().handler((_, res) => {
                     res.json({ success: true });
                     throw new Error("Post-send error");
                 }),

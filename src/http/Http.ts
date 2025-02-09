@@ -7,7 +7,7 @@ type Meta = {
     description?: string;
 } & Record<string, unknown>;
 
-type Protocol = {
+export type Protocol = {
     body: string | Record<string, unknown>;
     status: number;
     headers?: Headers;

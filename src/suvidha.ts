@@ -1,17 +1,17 @@
 import { z, ZodError } from "zod";
 import { Response, Request } from "express";
 import * as core from "express-serve-static-core";
-import { Connection, Handlers } from "./Handlers";
+import { Conn, Handlers } from "./Handlers";
 import { _Readonly, Merge } from "./utils.type";
 
-export interface ContextRequest<
-    T extends Record<string, any>,
+export interface CtxRequest<
+    C extends Record<string, any>,
     R extends any,
     B extends any = any,
     P extends Record<string, any> = Record<string, any>,
     Q extends core.Query = core.Query,
 > extends Request<P, R, B, Q> {
-    context: T;
+    context: C;
 }
 
 export type Context = Record<string | symbol, any>;
@@ -26,9 +26,9 @@ export class Suvidha<
     private bodySchema: z.ZodType<B> = z.any();
     private paramsSchema: z.ZodType<P> = z.any();
     private querySchema: z.ZodType<Q> = z.any();
-    private useHandlers: ((conn: Connection<any, any, any, any>) => any)[] = [];
+    private useHandlers: ((conn: Conn<any, any, any, any>) => any)[] = [];
 
-    constructor(private readonly handlers: Handlers) {}
+    constructor(private readonly handlers: Handlers) { }
 
     static create(handlers: Handlers) {
         return new Suvidha(handlers);
@@ -56,16 +56,11 @@ export class Suvidha<
     }
 
     use<T extends Context>(
-        fn: (
-            conn: Connection<
-                _Readonly<C>,
-                _Readonly<B>,
-                _Readonly<P>,
-                _Readonly<Q>
-            >,
+        middleware: (
+            conn: Conn<_Readonly<C>, _Readonly<B>, _Readonly<P>, _Readonly<Q>>,
         ) => Promise<T> | T,
     ) {
-        this.useHandlers.push(fn);
+        this.useHandlers.push(middleware);
         /**
          * This wild cast is required because C and Merge<C, T> are not necessarily
          * the subtype of each other.
@@ -73,35 +68,52 @@ export class Suvidha<
         return this as any as Suvidha<B, P, Q, Merge<C, T>, Built>;
     }
 
-    private async parse(conn: Connection) {
+    private assertZodError(err: unknown): asserts err is ZodError {
+        if (err instanceof ZodError) {
+            return;
+        }
+        throw new Error(
+            "Suvidha internal error: data validation layer did not throw ZodError." +
+            "\n Please create an issue at https://github.com/ishwar00/suvidha.js/issues" +
+            "\n ====== Error Log ======\n" +
+            err,
+        );
+    }
+
+    private async parse(conn: Conn) {
         try {
             const { body, params, query } = conn.req;
             conn.req.body = this.bodySchema.parse(body);
             conn.req.query = this.querySchema.parse(query);
             conn.req.params = this.paramsSchema.parse(params);
         } catch (err: unknown) {
-            if (err instanceof ZodError) {
-                await this.handlers.onSchemaErr(err, conn);
+            this.assertZodError(err);
+            await this.handlers.onSchemaErr(err, conn);
+
+            if (!conn.res.headersSent) {
+                console.warn(
+                    "Suvidha: onSchemaErr() did not complete the data validation error response. Re-throwing the error.",
+                );
+                throw err;
             }
-            throw err;
         }
     }
 
     private initializeContext<R>(
         req: any,
-    ): asserts req is ContextRequest<
+    ): asserts req is CtxRequest<
         _Readonly<C>,
         R,
         _Readonly<B>,
         _Readonly<P>,
         _Readonly<Q>
     > {
-        (req as ContextRequest<{}, R, B, P, Q>).context = {};
+        (req as CtxRequest<{}, R, B, P, Q>).context = {};
     }
 
     handler<Reply>(
         handler: (
-            req: ContextRequest<
+            req: CtxRequest<
                 _Readonly<C>,
                 Reply,
                 _Readonly<B>,
@@ -112,6 +124,8 @@ export class Suvidha<
             next: core.NextFunction,
         ) => Reply,
     ) {
+        // TODO: return typed express handler
+        // this will help if someone wants to add post response hook
         return async (
             req: Request<P, Reply, B, Q>,
             res: Response,
@@ -121,12 +135,16 @@ export class Suvidha<
             const conn = { req, res };
             try {
                 await this.parse(conn);
+                /* If validation layer completes the response, don't next layers */
+                if (res.headersSent) return;
 
                 for (const useFn of this.useHandlers) {
-                    conn.req.context = {
-                        ...conn.req.context,
+                    req.context = {
+                        ...req.context,
                         ...(await useFn(conn)),
                     };
+                    /* If any of the middleware completes the response */
+                    if (res.headersSent) return;
                 }
 
                 const output = await handler(req, res, next);
@@ -143,13 +161,14 @@ export class Suvidha<
                 }
                 await this.handlers.onComplete(output, conn, next);
             } catch (err: unknown) {
-                res.headersSent
-                    ? await this.handlers.onDualResponseDetected(
-                          err,
-                          conn,
-                          next,
-                      )
-                    : await this.handlers.onErr(err, conn, next);
+                if (res.headersSent) {
+                    return await this.handlers.onDualResponseDetected(
+                        err,
+                        conn,
+                        next,
+                    );
+                }
+                return await this.handlers.onErr(err, conn, next);
             }
         };
     }

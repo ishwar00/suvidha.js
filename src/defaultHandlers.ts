@@ -1,5 +1,5 @@
 import { ZodError } from "zod";
-import { Connection, Handlers } from "./Handlers";
+import { Conn, Handlers } from "./Handlers";
 import { isProtocol, Http, StatusCodes } from "./http";
 
 type ResonseFormat = {
@@ -9,7 +9,7 @@ type ResonseFormat = {
 };
 
 export class DefaultHandlers implements Handlers {
-    private constructor() {}
+    private constructor() { }
 
     private isClientErr(statusCode: number) {
         return statusCode >= 400 && statusCode < 500;
@@ -19,8 +19,7 @@ export class DefaultHandlers implements Handlers {
         return new DefaultHandlers();
     }
 
-    onErr(err: unknown, conn: Connection): Promise<void> | void {
-        console.log(JSON.stringify(err));
+    onErr(err: unknown, conn: Conn): Promise<void> | void {
         if (err instanceof Http.End) {
             const statusCode = err.getStatus();
             return void conn.res.status(statusCode).json({
@@ -47,7 +46,7 @@ export class DefaultHandlers implements Handlers {
         });
     }
 
-    onComplete(output: unknown, conn: Connection): Promise<void> | void {
+    onComplete(output: unknown, conn: Conn): Promise<void> | void {
         output =
             isProtocol(output) && !(output instanceof Http.End)
                 ? new Http.End(output)
@@ -90,7 +89,7 @@ export class DefaultHandlers implements Handlers {
         }
     }
 
-    onDualResponseDetected(data: unknown, _: Connection): Promise<void> | void {
+    onDualResponseDetected(data: unknown, _: Conn): Promise<void> | void {
         console.log(`Suvidha: UncaughtData ${JSON.stringify(data)}`);
     }
 }

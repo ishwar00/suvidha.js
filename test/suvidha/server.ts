@@ -3,7 +3,7 @@ import bodyParser from "body-parser";
 import { Suvidha, DefaultHandlers, Http } from "../../src";
 import { Book, BookSchema, Id, IdSchema } from "../schema";
 import { BooksController } from "./controller";
-import { Connection } from "../../src/Handlers";
+import { Conn } from "../../src/Handlers";
 import { Context } from "../../src/suvidha";
 import { setTimeout } from "timers/promises";
 
@@ -26,7 +26,7 @@ app.get(
     }),
 );
 
-async function middlewareA<T extends Context>(_: Connection<T>) {
+async function middlewareA<T extends Context>(_: Conn<T>) {
     await setTimeout(500);
     return {
         foo: {
@@ -37,7 +37,7 @@ async function middlewareA<T extends Context>(_: Connection<T>) {
     };
 }
 
-function middlewareB<T extends Connection>(_: T) {
+function middlewareB<T extends Conn>(_: T) {
     return {
         role: "admin",
         user: "ishwar",
