@@ -1,71 +1,102 @@
 ---
-title: Introduction
-description: "Welcome to the home of your new documentation"
+title: "Introduction"
+description: "A Structured Approach to Express APIs"
 ---
 
-<img
-  className="block dark:hidden"
-  src="/images/hero-light.svg"
-  alt="Hero Light"
-/>
-<img
-  className="hidden dark:block"
-  src="/images/hero-dark.svg"
-  alt="Hero Dark"
-/>
-
-## Setting up
-
-The first step to world-class documentation is setting up your editing environments.
+<div className="text-center mb-16">
+  <h1 className="text-4xl font-bold mb-4">Suvidha</h1>
+  <p className="text-xl text-gray-600 dark:text-gray-300">
+    Validation • Context • Control
+  </p>
+</div>
 
 <CardGroup cols={2}>
-  <Card
-    title="Edit Your Docs"
-    icon="pen-to-square"
-    href="https://mintlify.com/docs/quickstart"
-  >
-    Get your docs set up locally for easy development
+  <Card title="Type-Safe Middleware" icon="shield-check">
+    Chain middleware like LEGO blocks, with auto-typed context propagation.
   </Card>
-  <Card
-    title="Preview Changes"
-    icon="image"
-    href="https://mintlify.com/docs/development"
-  >
-    Preview your changes before you push to make sure they're perfect
+  <Card title="Data Validation" icon="certificate">
+    Zod-powered type safety for body, params, and queries—without cluttering your routes.
+  </Card>
+  <Card title="Framework Independence" icon="code-branch">
+    Keep your business logic clean and framework-agnostic
+  </Card>
+  <Card title="Explicit Control" icon="sliders">
+    Fine-grained control over request/response lifecycle
   </Card>
 </CardGroup>
 
-## Make it yours
+<Tooltip tip="सुविधा - Hindi for 'facility'">Suvidha</Tooltip> is a lightweight, type-safe Express.js library that adds powerful validation, middleware context management, and response handling.
 
-Update your docs to your brand and add valuable content for the best user conversion.
+- **No Rewrites** - Share data between middlewares with full TypeScript support
+- **Framework-agnostic business logic** - Separate your core logic from Express.js specifics
+- **Progressive adoption** - Works alongside existing Express.js code
+- **TypeScript Native** - Inferred types end "**guess what's in req**" games
 
-<CardGroup cols={2}>
-  <Card
-    title="Customize Style"
-    icon="palette"
-    href="https://mintlify.com/docs/settings/global"
-  >
-    Customize your docs to your company's colors and brands
-  </Card>
-  <Card
-    title="Reference APIs"
-    icon="code"
-    href="https://mintlify.com/docs/api-playground/openapi"
-  >
-    Automatically generate endpoints from an OpenAPI spec
-  </Card>
-  <Card
-    title="Add Components"
-    icon="screwdriver-wrench"
-    href="https://mintlify.com/docs/content/components/accordions"
-  >
-    Build interactive features and designs to guide your users
-  </Card>
-  <Card
-    title="Get Inspiration"
-    icon="stars"
-    href="https://mintlify.com/customers"
-  >
-    Check out our showcase of our favorite documentation
-  </Card>
-</CardGroup>
+```ts
+import express from "express";
+import { Suvidha, DefaultHandlers, Http, Conn } from "suvidha";
+import { z } from "zod";
+
+const app = express();
+app.use(express.json());
+
+// Create Suvidha instance with default handlers
+const suvidha = () => Suvidha.create(DefaultHandlers.create());
+
+// Define schemas for validation
+const UserSchema = z.object({
+    username: z.string().min(3),
+    email: z.string().email(),
+    age: z.number().min(13),
+});
+
+const checkAuth = async (): Promise<{ role: string }> => {
+    // Your auth logic here
+    return { role: "admin" };
+};
+
+// Middleware to check authentication
+const authMiddleware = async () => {
+    const user = await checkAuth().catch((_) => {
+        throw new Http.Unauthorized();
+    });
+    return { user }; // This becomes available in req.context
+};
+
+// Middleware to check user role
+const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
+    if (conn.req.context.user.role !== "admin") {
+        throw Http.Forbidden.body({ message: "Admin access required" });
+    }
+    return {};
+};
+
+// Create a new user (with validation and auth)
+app.post(
+    "/users",
+    suvidha()
+        .body(UserSchema)
+        .use(authMiddleware)
+        .use(roleCheck)
+        .handler(async (req) => {
+            const newUser = req.body; // Typed as z.infer<typeof UserSchema>
+            const admin = req.context.user; // Context from middleware as { user: { role: string } }
+
+            try {
+                const user = await createUser(newUser);
+                return Http.Created.body(user).meta({
+                    createdBy: admin.username,
+                });
+            } catch (err) {
+                if (err.code === "DUPLICATE_EMAIL") {
+                    throw Http.Conflict.body({
+                        message: "Email already exists",
+                    });
+                }
+                throw err; // Will be caught by onErr handler
+            }
+        }),
+);
+
+app.listen(3000);
+```

@@ -196,3 +196,61 @@ Please make sure to update tests as appropriate.
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
+
+
+```ascii
+[Start Request]
+      |
+      v
+[Parse Validation]----Error?----+
+      |                          |
+      |                          v
+      |                     [ZodError]---->onSchemaErr()
+      |                                        |
+      |                                        +--Headers Sent?---->Return
+      |                                        |
+      |                                        +--Not Sent---->Log & Throw
+      |                                                            |
+      v                                                           |
+[Check Headers Sent]----Yes---->Return                           |
+      |                                                          |
+      v                                                          |
+[Middleware Chain]                                               |
+      |                                                          |
+      +-->For Each Middleware:                                   |
+      |         |                                               |
+      |         v                                               |
+      |    Execute Middleware                                   |
+      |         |                                               |
+      |         +--Headers Sent?---->Return                     |
+      |         |                                               |
+      |         +--Update Context                               |
+      |                                                         |
+      v                                                         |
+[Check Headers Sent]----Yes---->Return                          |
+      |                                                         |
+      v                                                         |
+[Execute Handler]----Output                                     |
+      |              |                                          |
+      |              v                                          |
+      |         [Check Headers Sent]                            |
+      |              |                                          |
+      |              +--Yes---->onDualResponseDetected(output)  |
+      |              |                                          |
+      |              +--No----->onComplete(output)              |
+      |                                                         |
+      v                                                         |
+[Any Error Occurs]<-------------------------------------------|
+      |
+      v
+[Catch Block]
+      |
+      v
+[Check Headers Sent]
+      |
+      +--Yes---->onDualResponseDetected(error)
+      |
+      +--No----->onErr(error)
+```
+
+
