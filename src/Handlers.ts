@@ -22,10 +22,10 @@ export type Conn<
 export interface Handlers {
     /**
      * Called when handler throws exception
-     * it must not throw any exception, if it does application might crash
+     * it **must** not throw any exception, if it does application might crash
      * if no global error handlers are present
      *
-     * @param err - exception thrown by the handler
+     * @param err - exception thrown by the `onSchemaErr()`, `handler()` or `use()` middlewares method
      * @param conn - object contain express' request and response
      * @param next - express' next function
      */

@@ -64,6 +64,7 @@ const authMiddleware = async () => {
 };
 
 // Middleware to check user role
+// Expects req.context.user.role to be available in the context: { user: { role: string } }
 const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
     if (conn.req.context.user.role !== "admin") {
         throw Http.Forbidden.body({ message: "Admin access required" });

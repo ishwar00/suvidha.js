@@ -133,7 +133,7 @@ export class Suvidha<
             const conn = { req, res };
             try {
                 await this.parse(conn);
-                /* If validation layer completes the response, don't next layers */
+                /* If validation layer completes the response, don't go to next layers */
                 if (res.headersSent) return;
 
                 for (const useFn of this.useHandlers) {

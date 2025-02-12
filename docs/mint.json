@@ -21,25 +21,19 @@
       "group": "Get Started",
       "pages": [
         "introduction",
-        "installation",
-        "usage"
+        "installation"
+      ]
+    },
+    {
+      "group": "Usage",
+      "pages": [
+        "usage/basic"
       ]
     },
     {
       "group": "Reference",
       "pages": [
-        "essentials/markdown",
-        "essentials/code",
-        "essentials/images",
-        "essentials/settings",
-        "essentials/navigation",
-        "essentials/reusable-snippets"
-      ]
-    },
-    {
-      "group": "Reference",
-      "pages": [
-        "api-reference/introduction"
+        "reference/handlers"
       ]
     }
   ],

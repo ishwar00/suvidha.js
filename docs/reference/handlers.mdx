@@ -1,0 +1,278 @@
+---
+title: 'Handlers'
+---
+
+### Flow
+
+Before we start, let's understand the flow of request and response handling.
+
+```ascii Flow [expandable] {7, 37, 39, 50, 52}
+[Start Request]
+      |
+      v
+[Parse Validation]----Error?----+
+      |                          |
+      |                          v
+      |                     [ZodError]---->onSchemaErr()
+      |                                        |
+      |                                        +--Headers Sent?---->Return
+      |                                        |
+      |                                        +--Not Sent---->Log & Throw
+      |                                                            |
+      v                                                           |
+[Check Headers Sent]----Yes---->Return                           |
+      |                                                          |
+      v                                                          |
+[Middleware Chain]                                               |
+      |                                                          |
+      +-->For Each Middleware:                                   |
+      |         |                                               |
+      |         v                                               |
+      |    Execute Middleware                                   |
+      |         |                                               |
+      |         +--Headers Sent?---->Return                     |
+      |         |                                               |
+      |         +--Update Context                               |
+      |                                                         |
+      v                                                         |
+[Check Headers Sent]----Yes---->Return                          |
+      |                                                         |
+      v                                                         |
+[Execute Handler]----Output                                     |
+      |              |                                          |
+      |              v                                          |
+      |         [Check Headers Sent]                            |
+      |              |                                          |
+      |              +--Yes---->onDualResponseDetected(output)  |
+      |              |                                          |
+      |              +--No----->onComplete(output)              |
+      |                                                         |
+      v                                                         |
+[Any Error Occurs]<-------------------------------------------|
+      |
+      v
+[Catch Block]
+      |
+      v
+[Check Headers Sent]
+      |
+      +--Yes---->onDualResponseDetected(error)
+      |
+      +--No----->onErr(error)
+```
+
+All the above highlighted steps are handled by the **handlers**.
+Here is the code version of the above flow(and most of the `handler` method's code and library's core logic).
+
+
+```ts core [expandable] {4, 19, 23, 31, 34, 40}
+const conn = { req, res };
+try {
+    // parse() calls onSchemaErr() handler
+    await this.parse(conn);
+    /* If validation layer completes the response, don't go to next layers */
+    if (res.headersSent) return;
+
+    // Run middlewares sequentially
+    for (const useFn of this.useHandlers) {
+        req.context = {
+            ...req.context,
+            ...(await useFn(conn)),
+        };
+        /* If any of the middleware completes the response */
+        if (res.headersSent) return;
+    }
+
+    // request handler
+    const output = await handler(req, res, next);
+
+    if (res.headersSent) {
+        if (output !== undefined) {
+            await this.handlers.onDualResponseDetected(
+                output,
+                conn,
+                next,
+            );
+        }
+        return;
+    }
+    await this.handlers.onComplete(output, conn, next);
+} catch (err: unknown) {
+    if (res.headersSent) {
+        return await this.handlers.onDualResponseDetected(
+            err,
+            conn,
+            next,
+        );
+    }
+    return await this.handlers.onErr(err, conn, next);
+}
+```
+
+## Handlers
+
+Handlers are the core of the library. They are responsible for validating the request, handling the response.
+All handlers recieve the `Conn` object as an argument. Below is the definition of the `Conn` object.
+Type parameters are omitted for brevity.
+
+```ts
+/* Connection */
+export type Conn<T extends Context, ...> = {
+    // same as express' `Request` except with `context` property on it
+    req: CtxRequest<T, ...>; 
+    res: Response;
+};
+```
+
+#### 1. onSchemaErr (Validation Failure)
+
+Called when request validation fails during the parsing stage.
+
+**Trigger Conditions:**
+- First validation failure in body/params/query parsing
+- Before any middleware or handler execution
+
+**Responsibilities:**  
+- Convert `ZodError` to HTTP response  
+- **Must** complete the response or else `ZodError` will be re-thrown to `onErr()` handler
+
+```ts
+/**
+ * @param err - ZodError thrown by zod schema
+ * @param conn - object contain express' request and response
+ */
+onSchemaErr(err: ZodError, conn: Conn): Promise<void> | void;
+```
+
+Just take a look at the code snippet below to understand how it's called.
+
+```ts [expandable]
+async function parse(conn: Conn) {
+    try {
+        const { body, params, query } = conn.req;
+        conn.req.body = this.bodySchema.parse(body);
+        conn.req.query = this.querySchema.parse(query);
+        conn.req.params = this.paramsSchema.parse(params);
+    } catch (err: unknown) {
+        this.assertZodError(err);
+        await this.handlers.onSchemaErr(err, conn);
+
+        if (!conn.res.headersSent) {
+            // Re-throw the error hoping that onErr() handler will handle it
+            console.warn(
+                "Suvidha: onSchemaErr() did not complete the data validation error response. Re-throwing the error.",
+            );
+            throw err;
+        }
+    }
+}
+```
+
+Few things to note here:
+
+- Order of data validation: `body` -> `params` -> `query`
+- Must complete response (set headers and send data)
+- If response isn't completed, a warning is logged and error is re-thrown
+
+#### 2. onErr (Error Handler)
+
+Called when unhandled errors occur during request processing.
+
+**Trigger Conditions:**
+- Exceptions from onSchemaErr handler
+- Errors in middleware execution
+- Errors in main request handler
+
+**Responsibilities:**
+- Convert errors into appropriate HTTP responses
+- Must complete the response
+- Should never throw exceptions itself
+- Handle all error types (must be robust)
+
+```ts
+/**
+* @param err - exception thrown by the `onSchemaErr()`, `handler()` or `use()` middlewares method
+* @param conn - object contain express' request and response
+* @param next - express' next function
+*/
+onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
+```
+
+<Warning>
+**Never throw** - this is the last error handler
+</Warning>
+
+#### onComplete (Success Handler)
+Called when the request handler completes successfully but hasn't sent a response.
+
+**Trigger Conditions:**
+- Main handler returns a value
+- Response headers haven't been sent yet
+
+
+**Responsibilities:**
+- Transform handler output into HTTP response
+- Complete the response by sending data
+- Any errors thrown are caught by onErr (if headers not sent)
+
+```ts
+/**
+ * @param output - value returned by the handler function
+ * @param conn - object contain express' request and response
+ * @param next - express' next function
+ */
+onComplete(output: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
+```
+
+#### onDualResponseDetected (Conflict Handler)
+
+Handles scenarios where multiple response attempts occur.
+
+**Trigger Conditions:**
+- Handler returns value after response already sent
+- Error occurs after response headers sent
+- Any attempt to modify response after it's started
+
+**Responsibilities:**
+- Detect and log response conflicts
+- Prevent Express "Can't set headers" errors
+- Log appropriate warnings/errors
+
+```ts
+/** 
+ * @param outputOrErr - output or exception thrown by the handler
+ * @param conn - object contain express' request and response
+ * @param next - express' next function
+ */
+onDualResponseDetected(outputOrErr: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
+```
+
+#### Exmaple Implementation
+
+```ts
+const handlers = {
+    async onSchemaErr(err: ZodError, { res }: Conn) {
+        res.status(400).json({
+            error: 'Validation Error',
+            details: err.errors
+        });
+    },
+    
+    async onErr(err: unknown, { res }: Conn) {
+        res.status(500).json({
+            error: 'Internal Server Error',
+            message: err instanceof Error ? err.message : 'Unknown error'
+        });
+    },
+    
+    async onComplete(output: unknown, { res }: Conn) {
+        res.json(output);
+    },
+    
+    async onDualResponseDetected(output: unknown, { req }: Conn) {
+        console.warn(`Dual response detected for ${req.path}`, { output });
+    }
+};
+
+
+
