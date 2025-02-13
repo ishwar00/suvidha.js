@@ -32,72 +32,129 @@ description: "A Structured Approach to Express APIs"
 - **Progressive adoption** - Works alongside existing Express.js code
 - **TypeScript Native** - Inferred types end "**guess what's in req**" games
 
+## Quickstart
+
+<Tabs>
+
+<Tab title="app.ts">
+
 ```ts
 import express from "express";
-import { Suvidha, DefaultHandlers, Http, Conn } from "suvidha";
-import { z } from "zod";
+import { Suvidha, DefaultHandlers, Conn, Handlers } from "suvidha";
+import { UserSchema } from "./dto";
+import { authenticate, roleCheck } from "./middlewares";
+import { UserController } from "./controller";
 
 const app = express();
 app.use(express.json());
 
-// Create Suvidha instance with default handlers
-const suvidha = () => Suvidha.create(DefaultHandlers.create());
+// Custom error handler with logging
+class CustomHandlers extends DefaultHandlers implements Handlers {
+  override onErr(err: unknown, conn: Conn): Promise<void> | void {
+    console.error("Request failed:", err); // Log errors before handling
+    return super.onErr(err, conn);
+  }
+}
 
-// Define schemas for validation
-const UserSchema = z.object({
-    username: z.string().min(3),
-    email: z.string().email(),
-    age: z.number().min(13),
-});
+// Configure Suvidha with custom handlers
+const suvidha = () => Suvidha.create(new CustomHandlers());
 
-const checkAuth = async (): Promise<{ role: string }> => {
-    // Your auth logic here
-    return { role: "admin" };
-};
-
-// Middleware to check authentication
-const authMiddleware = async () => {
-    const user = await checkAuth().catch((_) => {
-        throw new Http.Unauthorized();
-    });
-    return { user }; // This becomes available in req.context
-};
-
-// Middleware to check user role
-// Expects req.context.user.role to be available in the context: { user: { role: string } }
-const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
-    if (conn.req.context.user.role !== "admin") {
-        throw Http.Forbidden.body({ message: "Admin access required" });
-    }
-    return {};
-};
-
-// Create a new user (with validation and auth)
+// Protected user creation endpoint
 app.post(
-    "/users",
-    suvidha()
-        .body(UserSchema)
-        .use(authMiddleware)
-        .use(roleCheck)
-        .handler(async (req) => {
-            const newUser = req.body; // Typed as z.infer<typeof UserSchema>
-            const admin = req.context.user; // Context from middleware as { user: { role: string } }
-
-            try {
-                const user = await createUser(newUser);
-                return Http.Created.body(user).meta({
-                    createdBy: admin.username,
-                });
-            } catch (err) {
-                if (err.code === "DUPLICATE_EMAIL") {
-                    throw Http.Conflict.body({
-                        message: "Email already exists",
-                    });
-                }
-                throw err; // Will be caught by onErr handler
-            }
-        }),
+  "/users",
+  suvidha()
+    .body(UserSchema) // Validate request body first
+    .use(authenticate) // Then authenticate
+    .use(roleCheck) // Then check permissions
+    .handler(async (req) => {
+      // All validation/security passed
+      const newUser = req.body; // Type-safe UserDTO
+      const { role } = req.context.user; // From auth middleware
+      return UserController.create(newUser, role); // Execute business logic
+    }),
 );
 
 app.listen(3000);
 ```
+</Tab>
+
+<Tab title="controller.ts">
+
+```ts
+import { Http } from "suvidha";
+import { UserDTO } from "./dto";
+
+declare function createUser(
+    user: UserDTO,
+    role: string,
+): Promise<{ id: string }>;
+
+export class UserController {
+    // Core business logic
+    static async create(user: UserDTO, role: string) {
+        try {
+            const result = await createUser(user, role);
+            return Http.Created.body(result); // 201 Created on success
+        } catch (err: any) {
+            if (err.code === "DUPLICATE_EMAIL") {
+                throw Http.Conflict.body({
+                    // 409 Conflict for duplicates
+                    message: "Email already exists",
+                });
+            }
+            throw err; // Bubble up other errors
+        }
+    }
+}
+```
+</Tab>
+
+<Tab title="middlewares.ts">
+
+```ts
+import { Conn, Http } from "suvidha";
+
+// Mock authentication service
+const verify = async (token: string) => {
+    // Replace with real auth logic
+    return { role: "admin" };
+};
+
+// Auth middleware: Adds user to context
+export const authenticate = async ({ req }: Conn) => {
+    const token = req.headers["authorization"]!;
+    const user = await verify(token).catch((_) => {
+        throw new Http.Unauthorized(); // Convert auth failures to 401
+    });
+    return { user }; // Context now contains { user }
+};
+
+// Role guard: Requires admin privileges
+// This middleware expects { user: { role: string } } in context
+export const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
+    if (conn.req.context.user.role !== "admin") {
+        throw Http.Forbidden.body({ message: "Admin access required" });
+    }
+    return {}; // Pass through if authorized
+};
+```
+</Tab>
+
+<Tab title="dto.ts">
+
+```ts
+// data transfer objects
+import { z } from "zod";
+
+// User validation schema
+export const UserSchema = z.object({
+  username: z.string().min(3),
+  email: z.string().email(),
+  age: z.number().min(13),
+});
+
+export type UserDTO = z.infer<typeof UserSchema>;
+```
+</Tab>
+
+</Tabs>
