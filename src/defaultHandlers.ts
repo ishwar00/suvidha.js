@@ -9,7 +9,7 @@ type ResonseFormat = {
     meta?: unknown;
 };
 
-type Formatter = (status: number, body: unknown, meta?: Meta) => any;
+export type Formatter = (status: number, body: unknown, meta?: Meta) => any;
 
 export const defaultFormatter: Formatter = (status, body, meta) => {
     const mapToStatus = (statusCode: number): ResonseFormat["status"] => {

@@ -2,10 +2,7 @@ import { z } from "zod";
 import { StatusCodes } from "./statusCodes";
 
 export type Headers = Record<string, string>;
-export type Meta = {
-    reason?: unknown;
-    description?: string;
-} & Record<string, unknown>;
+export type Meta = unknown;
 
 export type Protocol = {
     body: any;
