@@ -45,11 +45,11 @@ export function onComplete(output: unknown) {
 
 function mapStatus(statusCode: number) {
     if (statusCode >= 400 && statusCode < 500) {
-        return "error";
+        return "fail";
     }
 
     if (statusCode >= 500 && statusCode < 600) {
-        return "fail";
+        return "error";
     }
 
     return "success";

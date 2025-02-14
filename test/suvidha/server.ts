@@ -1,13 +1,18 @@
 import express, { Request } from "express";
 import bodyParser from "body-parser";
-import { Suvidha, DefaultHandlers, Http } from "../../src";
+import { Suvidha, DefaultHandlers, Http, Handlers, Conn } from "../../src";
 import { Book, BookSchema, Id, IdSchema } from "../schema";
 import { BooksController } from "./controller";
-import { Conn } from "../../src/Handlers";
-import { Context } from "../../src/suvidha";
 import { setTimeout } from "timers/promises";
 
-export const suvidha = () => Suvidha.create(DefaultHandlers.create());
+class CustomHandlers extends DefaultHandlers implements Handlers {
+    override onComplete(output: unknown, conn: Conn): Promise<void> | void {
+        conn.res.setHeader("X-Custom-Header", "Custom Header");
+        return super.onComplete(output, conn);
+    }
+}
+
+export const suvidha = () => Suvidha.create(new CustomHandlers());
 export const app = express();
 
 app.use(bodyParser.json());
@@ -26,42 +31,37 @@ app.get(
     }),
 );
 
-async function middlewareA<T extends Context>(_: Conn<T>) {
+async function authentication(_: Conn) {
     await setTimeout(500);
     return {
-        foo: {
-            bar: {
-                harshit: "harshit",
-            },
+        user: {
+            role: "admin",
+            username: "ishwar",
         },
     };
 }
 
-function middlewareB<T extends Conn>(_: T) {
-    return {
-        role: "admin",
-        user: "ishwar",
-    };
-}
+const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
+    if (conn.req.context.user.role !== "admin") {
+        throw Http.Forbidden.body({ message: "Admin access required" });
+    }
+    return {};
+};
 
 app.post(
     "/books",
     suvidha()
         .body(BookSchema)
-        .use(middlewareA)
-        .use(middlewareB)
+        .use(authentication)
+        .use(roleCheck)
         .use((conn) => {
-            if (conn.req.context.role !== "admin") {
+            if (conn.req.context.user.role !== "admin") {
                 throw new Http.Unauthorized();
             }
             return {};
         })
         .handler(async (req) => {
-            const {
-                foo: {
-                    bar: { harshit: _ },
-                },
-            } = req.context;
+            const { user: _ } = req.context;
             return books.create(req.body);
         }),
 );
@@ -88,4 +88,4 @@ app.delete(
         }),
 );
 
-// app.listen(3040, () => console.log("Server running on port 3000"));
+// app.listen(3040, () => console.log("Server running on port 3040"));
