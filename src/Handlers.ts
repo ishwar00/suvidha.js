@@ -1,6 +1,7 @@
 import { NextFunction, Response } from "express";
 import { ZodError } from "zod";
 import { CtxRequest } from "./suvidha";
+import { _Readonly } from "./utils.type";
 
 /**
  * Connection

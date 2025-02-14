@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { StatusCodes } from "./statusCodes";
 
-type Headers = Record<string, string>;
-type Meta = {
+export type Headers = Record<string, string>;
+export type Meta = {
     reason?: unknown;
     description?: string;
 } & Record<string, unknown>;
 
 export type Protocol = {
-    body: string | Record<string, unknown>;
+    body: any;
     status: number;
     headers?: Headers;
     meta?: Meta;
@@ -25,6 +25,7 @@ export function isProtocol(obj: unknown): obj is Protocol {
     return ProtocolSchema.strict().safeParse(obj).success;
 }
 
+// TODO: replace `body` with `data` to map stand response format, becuase `meta` maps to `meta` in standard response format
 export namespace Http {
     // TODO: document
     export class End {

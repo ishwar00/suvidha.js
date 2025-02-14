@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 import { Conn, Handlers } from "./Handlers";
-import { isProtocol, Http, StatusCodes } from "./http";
+import { isProtocol, Http, StatusCodes, Meta } from "./http";
+import util from "util";
 
 type ResonseFormat = {
     status: "error" | "success" | "fail";
@@ -8,33 +9,60 @@ type ResonseFormat = {
     meta?: unknown;
 };
 
-export class DefaultHandlers implements Handlers {
-    private constructor() { }
+type Formatter = (status: number, body: unknown, meta?: Meta) => any;
 
-    private isClientErr(statusCode: number) {
-        return statusCode >= 400 && statusCode < 500;
+export const defaultFormatter: Formatter = (status, body, meta) => {
+    const mapToStatus = (statusCode: number): ResonseFormat["status"] => {
+        if (statusCode >= 400 && statusCode < 500) {
+            // Client error
+            return "fail";
+        } else if (statusCode >= 500) {
+            // Server error
+            return "error";
+        } else {
+            return "success";
+        }
+    };
+
+    return {
+        status: mapToStatus(status),
+        data: body,
+        meta,
+    } satisfies ResonseFormat;
+};
+
+export class DefaultHandlers implements Handlers {
+    constructor(private readonly fmt: Formatter = defaultFormatter) { }
+
+    static create(fmt?: Formatter) {
+        return new DefaultHandlers(fmt);
     }
 
-    static create() {
-        return new DefaultHandlers();
+    private setHeaders(conn: Conn, headers: Record<string, string>): void {
+        headers = {
+            "Content-Type": "application/json",
+            ...headers,
+        };
+
+        for (const [key, value] of Object.entries(headers)) {
+            conn.res.setHeader(key, value);
+        }
     }
 
     onErr(err: unknown, conn: Conn): Promise<void> | void {
         if (err instanceof Http.End) {
             const statusCode = err.getStatus();
-            return void conn.res.status(statusCode).json({
-                status: this.isClientErr(statusCode) ? "error" : "fail",
-                data: err.getBody(),
-                meta: err.getMeta(),
-            } satisfies ResonseFormat);
+
+            this.setHeaders(conn, err.getHeaders());
+            return void conn.res
+                .status(statusCode)
+                .send(this.fmt(statusCode, err.getBody(), err.getMeta()));
         }
 
         const statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
-        conn.res.status(statusCode).json({
-            status: "fail",
-            data: "Internal Server Error",
-            meta: {},
-        } satisfies ResonseFormat);
+        conn.res
+            .status(statusCode)
+            .send(this.fmt(statusCode, "Internal Server Error", {}));
     }
 
     onSchemaErr(err: ZodError): never {
@@ -53,18 +81,12 @@ export class DefaultHandlers implements Handlers {
                 : output;
 
         if (output instanceof Http.End) {
-            const headers = output.getHeaders();
             const statusCode = output.getStatus();
+            this.setHeaders(conn, output.getHeaders());
 
-            for (const [key, value] of Object.entries(headers)) {
-                conn.res.setHeader(key, value);
-            }
-
-            return void conn.res.status(statusCode).json({
-                status: "success",
-                data: output.getBody(),
-                meta: output.getMeta(),
-            } satisfies ResonseFormat);
+            return void conn.res
+                .status(statusCode)
+                .send(this.fmt(statusCode, output.getBody(), output.getMeta()));
         }
 
         switch (typeof output) {
@@ -73,11 +95,9 @@ export class DefaultHandlers implements Handlers {
             case "boolean":
             case "undefined":
             case "object": {
-                return void conn.res.status(StatusCodes.OK).json({
-                    status: "success",
-                    data: output ?? null,
-                    meta: {},
-                } satisfies ResonseFormat);
+                return void conn.res
+                    .status(StatusCodes.OK)
+                    .send(this.fmt(StatusCodes.OK, output ?? null, {}));
             }
             default: {
                 const err = {
@@ -90,6 +110,8 @@ export class DefaultHandlers implements Handlers {
     }
 
     onDualResponseDetected(data: unknown, _: Conn): Promise<void> | void {
-        console.log(`Suvidha: UncaughtData ${JSON.stringify(data)}`);
+        console.log(
+            `Suvidha(onDualResponseDetected): ${util.inspect(data, { depth: 10 })}`,
+        );
     }
 }
