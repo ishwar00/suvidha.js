@@ -6,7 +6,7 @@ import util from "util";
 type ResonseFormat = {
     status: "error" | "success" | "fail";
     data: unknown;
-    meta?: unknown;
+    meta: unknown;
 };
 
 export type Formatter = (status: number, body: unknown, meta?: Meta) => any;
@@ -32,7 +32,7 @@ export const defaultFormatter: Formatter = (status, body, meta) => {
 };
 
 export class DefaultHandlers implements Handlers {
-    constructor(private readonly fmt: Formatter = defaultFormatter) { }
+    constructor(private readonly fmt: Formatter = defaultFormatter) {}
 
     static create(fmt?: Formatter) {
         return new DefaultHandlers(fmt);

@@ -191,8 +191,8 @@ Called when unhandled errors occur during request processing.
 
 ```ts
 /**
-* @param err - exception thrown by the `onSchemaErr()`, `handler()` or `use()` middlewares method
-* @param conn - object contain express' request and response
+* @param err - exception thrown by the `onSchemaErr()`, `handler()` or `use()` method
+* @param conn - object contains express' request and response
 * @param next - express' next function
 */
 onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
@@ -218,7 +218,7 @@ Called when the request handler completes successfully but hasn't sent a respons
 ```ts
 /**
  * @param output - value returned by the handler function
- * @param conn - object contain express' request and response
+ * @param conn - object contains express' request and response
  * @param next - express' next function
  */
 onComplete(output: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
@@ -233,15 +233,29 @@ Handles scenarios where multiple response attempts occur.
 - Error occurs after response headers sent
 - Any attempt to modify response after it's started
 
+```ts
+if (headersSent) {
+  if (handlerOutput !== undefined) {
+    onDualResponseDetected(handlerOutput);
+  }
+  return;
+}
+```
+
+**Typical Causes:**
+1. Calling `res.send()` then returning a value
+2. Throwing error after sending response
+
 **Responsibilities:**
 - Detect and log response conflicts
 - Prevent Express "Can't set headers" errors
 - Log appropriate warnings/errors
 
+
 ```ts
 /** 
  * @param outputOrErr - output or exception thrown by the handler
- * @param conn - object contain express' request and response
+ * @param conn - object contains express' request and response
  * @param next - express' next function
  */
 onDualResponseDetected(outputOrErr: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
@@ -250,29 +264,27 @@ onDualResponseDetected(outputOrErr: unknown, conn: Conn, next: NextFunction): Pr
 #### Exmaple Implementation
 
 ```ts
-const handlers = {
+class CustomHandlers implements Handlers {
     async onSchemaErr(err: ZodError, { res }: Conn) {
         res.status(400).json({
-            error: 'Validation Error',
-            details: err.errors
+            error: "Validation Error",
+            details: err.errors,
         });
-    },
-    
+    }
+
     async onErr(err: unknown, { res }: Conn) {
         res.status(500).json({
-            error: 'Internal Server Error',
-            message: err instanceof Error ? err.message : 'Unknown error'
+            error: "Internal Server Error",
+            message: err instanceof Error ? err.message : "Unknown error",
         });
-    },
-    
+    }
+
     async onComplete(output: unknown, { res }: Conn) {
         res.json(output);
-    },
-    
+    }
+
     async onDualResponseDetected(output: unknown, { req }: Conn) {
         console.warn(`Dual response detected for ${req.path}`, { output });
     }
-};
-
-
-
+}
+```

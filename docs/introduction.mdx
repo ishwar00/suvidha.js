@@ -27,9 +27,8 @@ description: "A Structured Approach to Express APIs"
 
 <Tooltip tip="सुविधा - Hindi for 'facility'">Suvidha</Tooltip> is a lightweight, type-safe Express.js library that adds powerful validation, middleware context management, and response handling.
 
-- **No Rewrites** - Share data between middlewares with full TypeScript support
+- **No Rewrites** - Adopt incrementally in existing Express apps
 - **Framework-agnostic business logic** - Separate your core logic from Express.js specifics
-- **Progressive adoption** - Works alongside existing Express.js code
 - **TypeScript Native** - Inferred types end "**guess what's in req**" games
 
 ## Quickstart
@@ -71,8 +70,8 @@ app.post(
     .use(roleCheck) // Then check permissions
     .handler(async (req) => {
       // All validation/security passed
-      const newUser = req.body; // Type-safe UserDTO
-      const { role } = req.context.user; // From auth middleware
+      const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
+      const { role } = req.context.user; // type of role: string
       return createUserHandler(newUser, role); // Execute business logic
     }),
 );
@@ -126,7 +125,7 @@ export const authenticate = async ({ req }: Conn) => {
     const user = await verify(token).catch((_) => {
         throw new Http.Unauthorized(); // Convert auth failures to 401
     });
-    return { user }; // Context now contains { user }
+    return { user }; // add `{ user }` to context
 };
 
 // Role guard: Requires admin privileges
@@ -135,7 +134,7 @@ export const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
     if (conn.req.context.user.role !== "admin") {
         throw Http.Forbidden.body({ message: "Admin access required" });
     }
-    return {}; // Pass through if authorized
+    return {}; // Nothing to add to context
 };
 ```
 </Tab>

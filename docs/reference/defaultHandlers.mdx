@@ -1,0 +1,101 @@
+---
+title: 'DefaultHandlers'
+---
+
+# Default Handlers Deep Dive
+
+## Response Format
+
+`DefaultHandlers` work out of the box with [`Http`](/reference/http) classes provided by `suvidha`.
+
+```ts
+interface StandardResponse {
+  status: 'success' | 'fail' | 'error';
+  data: unknown;
+  meta: Record<string, unknown>;
+}
+```
+
+| Key    | Type                                | Description                                         |
+|--------|-------------------------------------|-----------------------------------------------------|
+| status | `'success'` &#124; `'fail'` &#124; `'error'` | The status of the response                         |
+| data   | `unknown`                           | The actual response payload                        |
+| meta   | `Record<string, unknown>` | Additional metadata related to the response        |
+
+
+#### Status Flags
+| Type    | Description                                                                 
+|---------|-----------------------------------------------------------------------------
+| `success` | All went well, and (usually) some data was returned.                        
+| `fail`    | There was a problem with the data submitted, or some pre-condition of the API call wasn't satisfied. It's client error status code is `4xx`.
+| `error`   | An error occurred in processing the request, i.e. an exception was thrown. It's server error status code is `5xx`.
+
+
+
+### Example Responses
+<Tabs>
+
+<Tab title="Bad Request">
+
+```json
+{
+  "status": "fail",
+  "data": "username already exists.",
+  "meta": {}
+}
+```
+
+</Tab>
+
+<Tab title="handler">
+    
+```ts
+app.post(
+    "/users/:id",
+    suvidha()
+        .body(z.object({ username: z.string().min(3) }))
+        .handler(async (req) => {
+            const { username } = req.body;
+            return await Users.create({ username }).catch((_) => {
+                throw Http.BadRequest.body("username already exists.");
+            });
+        }),
+);
+```
+
+</Tab>
+</Tabs>
+
+<Tabs>
+<Tab title="Success">
+
+```json
+{
+  "status": "success",
+  "data": [
+    { "id": 1, "name": "Alice" },
+    { "id": 2, "name": "Bob" }
+  ],
+  "meta": {
+    "requestId": "abc-123"
+  }
+}
+```
+</Tab>
+<Tab title="handler">
+
+```ts
+app.get(
+    "/users",
+    suvidha().handler(async (req) => {
+        const users = await Users.find();
+        return Http.Ok.body(users).meta({ requestId: "abc-123" });
+    }),
+);
+
+```
+
+</Tab>
+</Tabs>
+
+
