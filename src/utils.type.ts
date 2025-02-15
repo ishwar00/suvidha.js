@@ -24,4 +24,4 @@ export type Merge<T, U> = Compute<Omit<T, CommonKeys<T, U>> & U>;
  */
 export type Compute<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
 
-export type _Readonly<T> = Compute<Readonly<T>>;
+export type _Readonly<T> = T extends {} ? Compute<Readonly<T>> : T;

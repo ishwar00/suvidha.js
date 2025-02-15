@@ -1,13 +1,10 @@
 import { ZodError } from "zod";
 import { Http, isProtocol } from "../src";
 
-export function onSchemaErr(output: ZodError) {
+export function onSchemaErr(_output: ZodError) {
     return Http.BadRequest.body(
         "Data provided does not meet the required format.",
-    ).meta({
-        description: "Data Validation Error",
-        reason: output.flatten(),
-    });
+    );
 }
 
 export function onComplete(output: unknown) {

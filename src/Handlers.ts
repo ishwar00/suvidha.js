@@ -68,4 +68,5 @@ export interface Handlers {
         outputOrErr: unknown,
         conn: Conn,
         next: NextFunction,
-    ): Promise<void> | void; }
+    ): Promise<void> | void;
+}

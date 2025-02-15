@@ -5,7 +5,7 @@ import { Conn, Handlers } from "./Handlers";
 import { _Readonly, Merge } from "./utils.type";
 
 export interface CtxRequest<
-    C extends Record<string, any>,
+    C extends Context,
     R extends any,
     B extends any = any,
     P extends Record<string, any> = Record<string, any>,
@@ -16,6 +16,8 @@ export interface CtxRequest<
 
 export type Context = Record<string | symbol, any>;
 
+type DataRef = "body" | "query" | "params";
+
 export class Suvidha<
     B extends any = any,
     P extends core.ParamsDictionary = core.ParamsDictionary,
@@ -23,10 +25,14 @@ export class Suvidha<
     C extends Context = {},
     Built extends keyof Suvidha = never,
 > {
-    private bodySchema: z.ZodType<B> = z.any();
-    private paramsSchema: z.ZodType<P> = z.any();
-    private querySchema: z.ZodType<Q> = z.any();
-    private useHandlers: ((conn: Conn<any, any, any, any>) => any)[] = [];
+    private readonly useHandlers: ((conn: Conn<any, any, any, any>) => any)[] =
+        [];
+    private readonly order: (DataRef | number)[] = [];
+    private schemaMap: Record<DataRef, z.ZodType<any>> = {
+        body: z.any(),
+        params: z.any(),
+        query: z.any(),
+    };
 
     constructor(private readonly handlers: Handlers) { }
 
@@ -37,21 +43,24 @@ export class Suvidha<
     params<T extends z.ZodTypeAny>(
         schema: T,
     ): Omit<Suvidha<B, z.infer<T>, Q, C, Built>, Built | "params"> {
-        this.paramsSchema = schema;
+        this.schemaMap["params"] = schema;
+        this.order.push("params");
         return this;
     }
 
     body<T extends z.ZodTypeAny>(
         schema: T,
     ): Omit<Suvidha<z.infer<T>, P, Q, C, Built>, Built | "body"> {
-        this.bodySchema = schema;
+        this.schemaMap["body"] = schema;
+        this.order.push("body");
         return this;
     }
 
     query<T extends z.ZodTypeAny>(
         schema: T,
     ): Omit<Suvidha<B, P, z.infer<T>, C, Built>, Built | "query"> {
-        this.querySchema = schema;
+        this.schemaMap["query"] = schema;
+        this.order.push("query");
         return this;
     }
 
@@ -60,6 +69,7 @@ export class Suvidha<
             conn: Conn<_Readonly<C>, _Readonly<B>, _Readonly<P>, _Readonly<Q>>,
         ) => Promise<T> | T,
     ) {
+        this.order.push(this.useHandlers.length);
         this.useHandlers.push(middleware);
         /**
          * This wild cast is required because C and Merge<C, T> are not necessarily
@@ -80,12 +90,11 @@ export class Suvidha<
         );
     }
 
-    private async parse(conn: Conn) {
+    private async parse(conn: Conn, dataRef: DataRef) {
         try {
-            const { body, params, query } = conn.req;
-            conn.req.body = this.bodySchema.parse(body);
-            conn.req.query = this.querySchema.parse(query);
-            conn.req.params = this.paramsSchema.parse(params);
+            conn.req[dataRef] = this.schemaMap[dataRef].parse(
+                conn.req[dataRef],
+            );
         } catch (err: unknown) {
             this.assertZodError(err);
             await this.handlers.onSchemaErr(err, conn);
@@ -132,15 +141,17 @@ export class Suvidha<
             this.initializeContext<Reply>(req);
             const conn = { req, res };
             try {
-                await this.parse(conn);
-                /* If validation layer completes the response, don't go to next layers */
-                if (res.headersSent) return;
+                for (const ref of this.order) {
+                    if (typeof ref === "string") {
+                        await this.parse(conn, ref);
+                    } else {
+                        const useFn = this.useHandlers[ref]!;
+                        req.context = {
+                            ...req.context,
+                            ...(await useFn(conn)),
+                        };
+                    }
 
-                for (const useFn of this.useHandlers) {
-                    req.context = {
-                        ...req.context,
-                        ...(await useFn(conn)),
-                    };
                     /* If any of the middleware completes the response */
                     if (res.headersSent) return;
                 }

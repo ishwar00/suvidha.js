@@ -196,6 +196,149 @@ describe("Suvidha Library", () => {
         });
     });
 
+    describe("middlewares execution order", () => {
+        it("executes validations and middlewares in declared order", async () => {
+            const executionOrder: string[] = [];
+
+            app.post(
+                "/test-order/:id",
+                suvidha()
+                    .body(z.object({ name: z.string() })) // 1. Body validation
+                    .use(async () => {
+                        executionOrder.push("middleware1");
+                        return {};
+                    })
+                    .query(z.object({ page: z.coerce.number() })) // 3. Query validation
+                    .params(z.object({ id: z.string() })) // 4. Params validation
+                    .use(async () => {
+                        executionOrder.push("middleware2");
+                        return {};
+                    })
+                    .handler((_, res) => {
+                        executionOrder.push("handler");
+                        res.json({ order: executionOrder });
+                    }),
+            );
+
+            const response = await request(app)
+                .post("/test-order/123?page=1")
+                .send({ name: "valid" });
+
+            expect(response.body.order).toEqual([
+                "middleware1", // After body validation
+                "middleware2", // After params validation
+                "handler",
+            ]);
+            expect(response.status).toBe(200);
+        });
+
+        it("validates modified data from middleware", async () => {
+            app.post(
+                "/test-modified-body",
+                suvidha()
+                    .use(async (conn) => {
+                        // Add field to body before validation
+                        conn.req.body = {
+                            ...conn.req.body,
+                            addedByMiddleware: true,
+                        };
+                        return {};
+                    })
+                    .body(
+                        z.object({
+                            // Validation now expects the modified body
+                            name: z.string(),
+                            addedByMiddleware: z.boolean(),
+                        }),
+                    )
+                    .handler((req, res) => {
+                        res.json(req.body);
+                    }),
+            );
+
+            const response = await request(app)
+                .post("/test-modified-body")
+                .send({ name: "test" }); // Original body lacks addedByMiddleware
+
+            expect(response.body).toEqual({
+                name: "test",
+                addedByMiddleware: true,
+            });
+            expect(response.status).toBe(200);
+        });
+
+        it("stops execution on validation error", async () => {
+            const executionOrder: string[] = [];
+
+            app.post(
+                "/test-error-stop",
+                suvidha()
+                    .body(z.object({ name: z.string() })) // Invalid (send number)
+                    .use(() => {
+                        executionOrder.push("middleware"); // Should never run
+                        return {};
+                    })
+                    .handler(() => {
+                        executionOrder.push("handler"); // Should never run
+                        return {};
+                    }),
+            );
+
+            const response = await request(app)
+                .post("/test-error-stop")
+                .send({ name: 123 });
+
+            expect(executionOrder).toEqual([]);
+            expect(response.status).toBe(400);
+        });
+
+        it("accumulates context across steps", async () => {
+            app.get(
+                "/test-context",
+                suvidha()
+                    .use(() => ({ key1: "A" })) // 1. Add key1
+                    .query(z.object({ val: z.string() })) // 2. Validate query
+                    .use((conn) => ({
+                        key2: `B-${conn.req.context.key1}`, // Uses key1
+                    }))
+                    .handler((req, res) => {
+                        res.json(req.context); // Should have key1 + key2
+                    }),
+            );
+
+            const response = await request(app).get("/test-context?val=test");
+
+            expect(response.body).toEqual({
+                key1: "A",
+                key2: "B-A",
+            });
+            expect(response.status).toBe(200);
+        });
+
+        it("middleware accesses validated body", async () => {
+            app.post(
+                "/test-access-validated-data",
+                suvidha()
+                    .body(z.object({ name: z.string() })) // Validate first
+                    .use(async (conn) => {
+                        await setTimeout(100);
+                        // Access parsed body
+                        return { name: conn.req.body.name.toUpperCase() };
+                    })
+                    .handler((req, res) => {
+                        res.json(req.context);
+                    }),
+            );
+
+            const response = await request(app)
+                .post("/test-access-validated-data")
+                .send({ name: "test" });
+
+            expect(response.body).toEqual({ name: "TEST" });
+            expect(response.status).toBe(200);
+        });
+    });
+
     describe("Edge Cases", () => {
         it("stops parsing after first validation error", async () => {
             app.post(

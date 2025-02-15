@@ -32,7 +32,7 @@ export const defaultFormatter: Formatter = (status, body, meta) => {
 };
 
 export class DefaultHandlers implements Handlers {
-    constructor(private readonly fmt: Formatter = defaultFormatter) {}
+    constructor(private readonly fmt: Formatter = defaultFormatter) { }
 
     static create(fmt?: Formatter) {
         return new DefaultHandlers(fmt);
@@ -65,13 +65,10 @@ export class DefaultHandlers implements Handlers {
             .send(this.fmt(statusCode, "Internal Server Error", {}));
     }
 
-    onSchemaErr(err: ZodError): never {
+    onSchemaErr(_err: ZodError, _conn: Conn): Promise<void> | void {
         throw Http.BadRequest.body(
             "Data provided does not meet the required format.",
-        ).meta({
-            description: "Data Validation Error",
-            reason: err.flatten(),
-        });
+        );
     }
 
     onComplete(output: unknown, conn: Conn): Promise<void> | void {
