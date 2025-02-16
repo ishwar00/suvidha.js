@@ -1,32 +1,35 @@
 ---
 title: "Introduction"
 description: "A Structured Approach to Express APIs"
-icon: 'scroll'
+icon: "scroll"
 ---
 
 <div className="text-center mb-16">
-  <h1 className="text-4xl font-bold mb-4">Suvidha</h1>
-  <p className="text-xl text-gray-600 dark:text-gray-300">
-    Validation • Context • Control
-  </p>
+    <h1 className="text-4xl font-bold mb-4">Suvidha</h1>
+    <p className="text-xl text-gray-600 dark:text-gray-300">
+        Validation • Context • Control
+    </p>
 </div>
 
 <CardGroup cols={2}>
-  <Card title="Type-Safe Middleware" icon="shield-check">
-    Chain middleware like LEGO blocks, with auto-typed context propagation.
-  </Card>
-  <Card title="Data Validation" icon="certificate">
-    Zod-powered type safety for body, params, and queries—without cluttering your routes.
-  </Card>
-  <Card title="Framework Independence" icon="code-branch">
-    Keep your business logic clean and framework-agnostic
-  </Card>
-  <Card title="Explicit Control" icon="sliders">
-    Fine-grained control over request/response lifecycle
-  </Card>
+    <Card title="Type-Safe Middleware" icon="shield-check">
+        Chain middleware like LEGO blocks, with auto-typed context propagation.
+    </Card>
+    <Card title="Data Validation" icon="certificate">
+        Zod-powered type safety for body, params, and queries—without cluttering
+        your routes.
+    </Card>
+    <Card title="Framework Independence" icon="code-branch">
+        Keep your business logic clean and framework-agnostic
+    </Card>
+    <Card title="Explicit Control" icon="sliders">
+        Fine-grained control over request/response lifecycle
+    </Card>
 </CardGroup>
 
-<Tooltip tip="सुविधा - Hindi for 'facility'">Suvidha</Tooltip> is a lightweight, type-safe Express.js library that adds powerful validation, middleware context management, and response handling.
+<Tooltip tip="सुविधा - Hindi for 'facility'">Suvidha</Tooltip> is a lightweight,
+type-safe Express.js library that adds powerful validation, middleware context
+management, and response handling.
 
 - **No Rewrites** - Adopt incrementally in existing Express apps
 - **Framework-agnostic business logic** - Separate your core logic from Express.js specifics
@@ -58,13 +61,13 @@ app.use(express.json());
 
 // Formatter for response body
 const formatter: Formatter = (status, body, meta) => {
-  const isDev = process.env["NODE_ENV"] === "development";
-  // Example response format
-  return {
-    statusCode: status,
-    data: body,
-    meta: isDev ? meta : undefined,
-  };
+    const isDev = process.env["NODE_ENV"] === "development";
+    // Example response format
+    return {
+        statusCode: status,
+        data: body,
+        meta: isDev ? meta : undefined,
+    };
 };
 
 // Configure Suvidha with default handlers
@@ -72,21 +75,22 @@ const suvidha = () => Suvidha.create(new DefaultHandlers(formatter));
 
 // Protected user creation endpoint
 app.post(
-  "/users",
-  suvidha()
-    .use(authenticate) // authenticate
-    .use(roleCheck) // check permissions
-    .body(UserSchema) // Validate request body
-    .handler(async (req) => {
-      // All validation/security passed
-      const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
-      const { role } = req.context.user; // type of role: string
-      return createUserHandler(newUser, role); // Execute business logic
-    }),
+    "/users",
+    suvidha()
+        .use(authenticate) // authenticate
+        .use(roleCheck) // check permissions
+        .body(UserSchema) // Validate request body
+        .handler(async (req) => {
+            // All validation/security passed
+            const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
+            const { role } = req.context.user; // type of role: string
+            return createUserHandler(newUser, role); // Execute business logic
+        }),
 );
 
 app.listen(3000);
 ```
+
 </Tab>
 
 <Tab title="controller.ts">
@@ -115,6 +119,7 @@ export async function createUserHandler(user: UserDTO, role: string) {
     }
 }
 ```
+
 </Tab>
 
 <Tab title="middlewares.ts">
@@ -146,6 +151,7 @@ export const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
     return {}; // Nothing to add to context
 };
 ```
+
 </Tab>
 
 <Tab title="dto.ts">
@@ -156,13 +162,14 @@ import { z } from "zod";
 
 // User validation schema
 export const UserSchema = z.object({
-  username: z.string().min(3),
-  email: z.string().email(),
-  age: z.number().min(13),
+    username: z.string().min(3),
+    email: z.string().email(),
+    age: z.number().min(13),
 });
 
 export type UserDTO = z.infer<typeof UserSchema>;
 ```
+
 </Tab>
 
 </Tabs>
@@ -171,9 +178,9 @@ export type UserDTO = z.infer<typeof UserSchema>;
 
 ```json
 {
-  "statusCode": 201,
-  "data": {
-    "id": "67adc39ea1ff4e9d60273236",
-  }
+    "statusCode": 201,
+    "data": {
+        "id": "67adc39ea1ff4e9d60273236"
+    }
 }
 ```

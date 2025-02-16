@@ -4,18 +4,16 @@ description: Guide to Suvidha's APIs
 icon: "plug"
 ---
 
-<iframe 
-    width="560" 
-    height="315" 
-    src="https://www.youtube.com/embed/ZgmxOb7BEmo?si=gYMEddxMAUJpCiea" 
-    title="YouTube video player" 
-    frameborder="0" 
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-    referrerpolicy="strict-origin-when-cross-origin" 
+<iframe
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/ZgmxOb7BEmo?si=gYMEddxMAUJpCiea"
+    title="YouTube video player"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerpolicy="strict-origin-when-cross-origin"
     allowfullscreen
->
-</iframe>
-
+></iframe>
 
 # Core API Methods
 
@@ -24,14 +22,15 @@ icon: "plug"
 main class to create a new instance of Suvidha, requires `Handlers` instance.
 
 ```ts
-constructor(handlers: Handlers); 
+constructor(handlers: Handlers);
 ```
+
 </Accordion>
 
 <Accordion title="Handlers" icon="code">
 
-interface to define handlers for `onSchemaErr`, `onComplete`, `onDualResponseDetected` and `onErr`.
-  
+interface to define handlers for `onSchemaErr`, `onComplete`, `onPostResponse` and `onErr`.
+
 ```ts
 interface Handlers {
     onSchemaErr(err: ZodError, conn: Conn): Promise<void> | void;
@@ -41,7 +40,7 @@ interface Handlers {
         conn: Conn,
         next: NextFunction,
     ): Promise<void> | void;
-    onDualResponseDetected(
+    onPostResponse(
         outputOrErr: unknown,
         conn: Conn,
         next: NextFunction,
@@ -50,27 +49,33 @@ interface Handlers {
 ```
 
 Refer to [Handlers](/reference/handlers) for more details.
+
 </Accordion>
 
 <Accordion title=".body(schema: ZodType)" icon="code">
 
 ### Purpose
+
 Validate and type the request body using Zod schemas
 
 ### Parameters
+
 - `schema`: Zod schema definition
 - Returns: Chainable Suvidha instance
 
 ### Example
+
 ```ts
-Suvidha.create()
-  .body(z.object({
-    email: z.string().email(),
-    password: z.string().min(8)
-  }))
+Suvidha.create().body(
+    z.object({
+        email: z.string().email(),
+        password: z.string().min(8),
+    }),
+);
 ```
 
 ### Behavior
+
 - Validates request body before middleware/handler execution
 - Overrides default `any` type with schema inference
 
@@ -79,9 +84,11 @@ Suvidha.create()
 <Accordion title=".params(schema: ZodType)" icon="code">
 
 ### Purpose
+
 Validate and type URL path parameters
 
 ### Example
+
 ```ts
 .params(z.object({
   userId: z.string().uuid(),
@@ -90,10 +97,11 @@ Validate and type URL path parameters
 ```
 
 ### Access in Handler
+
 ```ts
-handler(req => {
-  console.log(req.params.userId); // Type-safe string
-})
+handler((req) => {
+    console.log(req.params.userId); // Type-safe string
+});
 ```
 
 </Accordion>
@@ -101,9 +109,11 @@ handler(req => {
 <Accordion title=".query(schema: ZodType)" icon="code">
 
 ### Purpose
+
 Validate and type query string parameters
 
 ### Example
+
 ```ts
 .query(z.object({
   page: z.number().default(1),
@@ -112,9 +122,10 @@ Validate and type query string parameters
 ```
 
 ### Default Values
+
 ```ts
 // If ?page=3 not provided
-req.query.page // 1 (from default)
+req.query.page; // 1 (from default)
 ```
 
 </Accordion>
@@ -122,6 +133,7 @@ req.query.page // 1 (from default)
 <Accordion title=".use(middleware)" icon="code">
 
 ### Purpose
+
 Builds request context through chainable middleware. Each call merges new properties into the context while preserving type safety.
 Any exceptions thrown will be handled by `onErr` handler.
 
@@ -135,15 +147,14 @@ Any exceptions thrown will be handled by `onErr` handler.
 
 <Note> Merging is same as `...` spread operator, `new_ctx = { ...current_ctx, ...ctx }` </Note>
 
-
 ### Middleware Signature
+
 ```ts
-type Middleware<Ctx> = (
-  conn: Conn<CurrentContext>
-) => Ctx | Promise<Ctx>
+type Middleware<Ctx> = (conn: Conn<CurrentContext>) => Ctx | Promise<Ctx>;
 ```
 
 ### Example
+
 ```ts
 .use(async (conn) => ({
   user: await authenticate(conn.req)
@@ -154,10 +165,11 @@ type Middleware<Ctx> = (
 ```
 
 ### Type Safety
+
 ```ts
 // In handler:
-req.context.user // AuthenticatedUser
-req.context.permissions // string[]
+req.context.user; // AuthenticatedUser
+req.context.permissions; // string[]
 ```
 
 </Accordion>
@@ -165,9 +177,11 @@ req.context.permissions // string[]
 <Accordion title=".handler(fn)" icon="code">
 
 ### Purpose
+
 Define final request handler with full type safety.
 
 ### Signature
+
 ```ts
 .handler(
   (req: CtxRequest, res: Response, next: NextFunction) => Reply
@@ -175,29 +189,30 @@ Define final request handler with full type safety.
 ```
 
 ### Parameters
+
 - `req` is express' `Request` object with added context
 - `res` is express' `Request` object
 - `next` is express' `NextFunction` to call next middleware
 
-
 ### Return Handling
-| Return Type       | Behavior                               |
-|-------------------|----------------------------------------|
-| `undefined`       | Must call `res.send()` manually to send the response |
+
+| Return Type                  | Behavior                                                |
+| ---------------------------- | ------------------------------------------------------- |
+| `undefined`                  | Must call `res.send()` manually to send the response    |
 | `Http.End` \| `Other Values` | Processed by `onComplete` handler (If headers not sent) |
 
 </Accordion>
 </AccordionGroup>
 
 <Note> 
-Execution order of middlewares is same as declaration order 
+Execution order of middlewares is same as declaration order
 
-```ts 
+```ts
 app.get(
     "/reports",
     suvidha()
         .query(pageSchema)
-        .use(middyA) 
+        .use(middyA)
         .use(middyB)
         .params(IdSchema)
         .handler((req) => {
@@ -210,7 +225,7 @@ Execution order is `query` -> `middyA` -> `middyB` -> `body` -> `handler`
 
 </Note>
 
-# Usage 
+# Usage
 
 ## Data Validation
 
@@ -218,19 +233,19 @@ Validate the request body using Zod schemas.
 
 ```ts {10, 12}
 const userSchema = z.object({
-  username: z.string().min(3),
-  email: z.string().email(),
-  age: z.number().min(13),
+    username: z.string().min(3),
+    email: z.string().email(),
+    age: z.number().min(13),
 });
 
 app.post(
-  "/users",
-  suvidha()
-    .body(userSchema)
-    .handler(async (req) => {
-      const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
-      // Execute business logic
-    }),
+    "/users",
+    suvidha()
+        .body(userSchema)
+        .handler(async (req) => {
+            const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
+            // Execute business logic
+        }),
 );
 ```
 
@@ -245,11 +260,11 @@ middlewares take `Conn` as input and return `Context | Promise<Context>`.
 type ExpectedContext = { user: User };
 
 const middleware = (conn: Conn<ExpectedContext>) => {
-  // business logic
-  return {
-    // return context that will be merged with the current context
-  }
-}
+    // business logic
+    return {
+        // return context that will be merged with the current context
+    };
+};
 ```
 
 <Tabs>
@@ -266,6 +281,7 @@ app.get(
         }),
 );
 ```
+
 </Tab>
 
 <Tab title="doesn't work">
@@ -282,7 +298,7 @@ app.get(
 );
 ```
 
-Typescript will throw an error, since `middleware` expects `{ user: User }` in context, 
+Typescript will throw an error, since `middleware` expects `{ user: User }` in context,
 but context is `{}` as `authenticate` middleware is not called yet.
 
 ```text typescript error [2345]
@@ -311,45 +327,45 @@ app.get(
         .handler((req) => req.context.report), // Final: auth + user + report
 );
 ```
+
 Reorder middlewares → Type error ← Context dependencies broken.
-
-
 
 ## Loosely Coupled Business Logic
 
-Handle responses using `onComplete` and `onErr` when using `Suvidha` with `DefaultHandlers`. 
+Handle responses using `onComplete` and `onErr` when using `Suvidha` with `DefaultHandlers`.
 This separates your core business logic from framework-specific response methods, keeping your code cleaner by delegating response handling to the handlers.
 
 ```ts
 const UserSchema = z.object({
-  username: z.string().min(3),
-  email: z.string().email(),
+    username: z.string().min(3),
+    email: z.string().email(),
 });
 
 type UserDTO = z.infer<typeof UserSchema>;
 
 // Keep your business logic clean and loosely coupled
 const requestHandler = (user: UserDTO) => {
-  // Execute business logic
-  return {
-    id: '67619c28758da37270b925a8'
-  }
-}
+    // Execute business logic
+    return {
+        id: "67619c28758da37270b925a8",
+    };
+};
 
 app.post(
-  "/users",
-  suvidha()
-    .body(UserSchema)
-    .use(authenticate)
-    .use(roleCheck) 
-    .handler(async (req) => {
-      const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
-      return createUserHandler(newUser, role); // Execute business logic
-    }),
+    "/users",
+    suvidha()
+        .body(UserSchema)
+        .use(authenticate)
+        .use(roleCheck)
+        .handler(async (req) => {
+            const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
+            return createUserHandler(newUser, role); // Execute business logic
+        }),
 );
 ```
 
 ## Suvidha as data validation middleware
+
 To use Suvidha solely for data validation with TypeScript inference, implement `onSchemaErr` method.
 
 ```ts {38}
@@ -371,7 +387,7 @@ class CustomHandlers implements Handlers {
         throw new Error("Method not implemented.");
     }
 
-    onDualResponseDetected(): Promise<void> | void {
+    onPostResponse(): Promise<void> | void {
         throw new Error("Method not implemented.");
     }
 }
@@ -397,7 +413,7 @@ app.post(
 );
 ```
 
-## DRY Suvidha 
+## DRY Suvidha
 
 If you have common middlewares accross multiple routes, you can create a `Suvidha` instance and reuse it.
 
@@ -448,26 +464,29 @@ app.post(
 <CodeGroup>
 
 ```ts Before
-app.post('/login', 
-  (req, res, next) => {
-    if (!validateBody(req.body)) {
-      return res.status(400).json({ error: "Invalid" });
-    }
-    next();
-  },
-  (req, res) => {
-    // Handler logic
-  }
+app.post(
+    "/login",
+    (req, res, next) => {
+        if (!validateBody(req.body)) {
+            return res.status(400).json({ error: "Invalid" });
+        }
+        next();
+    },
+    (req, res) => {
+        // Handler logic
+    },
 );
 ```
 
 ```ts After
-app.post('/login',
-  Suvidha.create()
-    .body(loginSchema)
-    .handler(req => {
-      return handleLogin(req.body);
-    })
+app.post(
+    "/login",
+    Suvidha.create()
+        .body(loginSchema)
+        .handler((req) => {
+            return handleLogin(req.body);
+        }),
 );
 ```
+
 </CodeGroup>

@@ -1,5 +1,5 @@
 ---
-title: 'DefaultHandlers'
+title: "DefaultHandlers"
 ---
 
 # Default Handlers Deep Dive
@@ -10,38 +10,37 @@ title: 'DefaultHandlers'
 
 ```ts
 interface StandardResponse {
-  status: 'success' | 'fail' | 'error';
-  data: unknown;
-  meta: Record<string, unknown>;
+    status: "success" | "fail" | "error";
+    data: unknown;
+    meta: Record<string, unknown>;
 }
 ```
 
-| Key    | Type                                | Description                                         |
-|--------|-------------------------------------|-----------------------------------------------------|
-| status | `'success'` &#124; `'fail'` &#124; `'error'` | The status of the response                         |
-| data   | `unknown`                           | The actual response payload                        |
-| meta   | `Record<string, unknown>` | Additional metadata related to the response        |
-
+| Key    | Type                                         | Description                                 |
+| ------ | -------------------------------------------- | ------------------------------------------- |
+| status | `'success'` &#124; `'fail'` &#124; `'error'` | The status of the response                  |
+| data   | `unknown`                                    | The actual response payload                 |
+| meta   | `Record<string, unknown>`                    | Additional metadata related to the response |
 
 #### Status Flags
-| Type    | Description                                                                 
-|---------|-----------------------------------------------------------------------------
-| `success` | All went well, and (usually) some data was returned.                        
-| `fail`    | There was a problem with the data submitted, or some pre-condition of the API call wasn't satisfied. It's client error status code is `4xx`.
-| `error`   | An error occurred in processing the request, i.e. an exception was thrown. It's server error status code is `5xx`.
 
-
+| Type      | Description                                                                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `success` | All went well, and (usually) some data was returned.                                                                                         |
+| `fail`    | There was a problem with the data submitted, or some pre-condition of the API call wasn't satisfied. It's client error status code is `4xx`. |
+| `error`   | An error occurred in processing the request, i.e. an exception was thrown. It's server error status code is `5xx`.                           |
 
 ### Example Responses
+
 <Tabs>
 
 <Tab title="Bad Request">
 
 ```json
 {
-  "status": "fail",
-  "data": "username already exists.",
-  "meta": {}
+    "status": "fail",
+    "data": "username already exists.",
+    "meta": {}
 }
 ```
 
@@ -71,16 +70,17 @@ app.post(
 
 ```json
 {
-  "status": "success",
-  "data": [
-    { "id": 1, "name": "Alice" },
-    { "id": 2, "name": "Bob" }
-  ],
-  "meta": {
-    "requestId": "abc-123"
-  }
+    "status": "success",
+    "data": [
+        { "id": 1, "name": "Alice" },
+        { "id": 2, "name": "Bob" }
+    ],
+    "meta": {
+        "requestId": "abc-123"
+    }
 }
 ```
+
 </Tab>
 <Tab title="handler">
 
@@ -92,10 +92,7 @@ app.get(
         return Http.Ok.body(users).meta({ requestId: "abc-123" });
     }),
 );
-
 ```
 
 </Tab>
 </Tabs>
-
-

@@ -8,25 +8,28 @@ Suvidha is designed for type safety and better developer experience with Express
 
 Let's take a look at the typical flow of a request and response handling.
 
-
 <Steps>
-  <Step title="Authentication" icon="shield-check">
-    Validates user identity by checking the provided JWT token, API key, or session cookie before proceeding.
-  </Step>
-  
-  <Step title="Authorization" icon="user-check">
-    Verifies if the authenticated user has the required permissions to access the requested resource.
-  </Step>
-  
-  <Step title="Validation" icon="circle-check">
-    Ensures all request data is properly formatted and meets the required validation rules.
-  </Step>
-  
-  <Step title="Resource" icon="database">
-    Executes the main business logic to handle the request and prepare the appropriate response.
-  </Step>
-</Steps>
+    <Step title="Authentication" icon="shield-check">
+        Validates user identity by checking the provided JWT token, API key, or
+        session cookie before proceeding.
+    </Step>
 
+    <Step title="Authorization" icon="user-check">
+        Verifies if the authenticated user has the required permissions to
+        access the requested resource.
+    </Step>
+
+    <Step title="Validation" icon="circle-check">
+        Ensures all request data is properly formatted and meets the required
+        validation rules.
+    </Step>
+
+    <Step title="Resource" icon="database">
+        Executes the main business logic to handle the request and prepare the
+        appropriate response.
+    </Step>
+
+</Steps>
 
 Below is an **usual** example implementation of it in express.js.
 
@@ -52,6 +55,7 @@ app.post(
     },
 );
 ```
+
 </Tab>
 
 <Tab title="middlewares">
@@ -108,6 +112,7 @@ async function handler(req: Request, res: Response) {
 }
 
 ```
+
 </Tab>
 
 <Tab title="dto">
@@ -118,18 +123,19 @@ import { z } from "zod";
 
 // User validation schema
 export const BookSchema = z.object({
-  name: z.string().min(3),
-  author: z.string().min(3),
+    name: z.string().min(3),
+    author: z.string().min(3),
 });
 
 export type BookDto = z.infer<typeof BookSchema>;
 ```
-</Tab>
 
+</Tab>
 
 </Tabs>
 
 Popular solutions:
+
 - [`asyncHandler()`](https://www.google.com/search?q=async+handler) to avoid `try-catch` boilerplate
 - [extend](https://www.google.com/search?q=how+to+add+user+info+to+express+request) Express' Request interface globally to add `user`
 
@@ -149,17 +155,18 @@ Re-writing the above example using Suvidha:
 // Order authenticate -> authorize is enforced at compile-time
 app.post(
     "/books",
-  suvidha()
-    .body(BookSchema)
-    .use(authenticate)
-    .use(authorize)
-    .handler(async (req, _res) => {
-      const { user } = req.context; // type of user: { role: string, name: string }
-      const book = req.body; // type of book: { name: string, author: string }
-      return handler(book, user);
-    }),
+    suvidha()
+        .body(BookSchema)
+        .use(authenticate)
+        .use(authorize)
+        .handler(async (req, _res) => {
+            const { user } = req.context; // type of user: { role: string, name: string }
+            const book = req.body; // type of book: { name: string, author: string }
+            return handler(book, user);
+        }),
 );
 ```
+
 </Tab>
 
 <Tab title="middlewares">
@@ -202,8 +209,8 @@ async function handler(book: BookDto, user: User) {
   }
 }
 ```
-</Tab>
 
+</Tab>
 
 <Tab title="dto">
 
@@ -213,12 +220,13 @@ import { z } from "zod";
 
 // User validation schema
 export const BookSchema = z.object({
-  name: z.string().min(3),
-  author: z.string().min(3),
+    name: z.string().min(3),
+    author: z.string().min(3),
 });
 
 export type BookDto = z.infer<typeof BookSchema>;
 ```
+
 </Tab>
 
 </Tabs>
@@ -226,10 +234,8 @@ If you noticed, we never used `_res: Response` anywhere to send response,
 because that's handled by `Handlers` for us. If you want to send a response manually,
 you can still do `res.send()` and it will work fine.
 
-
 To understand how `Suvidha` facilitates this, let's look at the flow.
 Though the code version of it is easier.
-
 
 Lines are highlighted wherever the `Handlers` are called incluing request handler.
 
@@ -237,67 +243,68 @@ Lines are highlighted wherever the `Handlers` are called incluing request handle
 
 <Tab title="ascii">
 
-```ascii [expandable] {9, 39, 34, 41, 52, 54}
-// "Return" -> return from the request handler
-
-[Start Request]
-      |
-      v
-[Parse Validation]----Error?----+
-      |                          |
-      |                          v
-      |                     [ZodError]---->onSchemaErr()
-      |                                        |
-      |                                        +--Headers Sent?---->Return
-      |                                        |
-      |                                        +--Not Sent---->Log & Re-Throw Err
-      |                                                            |
-      v                                                           |
-[Check Headers Sent]----Yes---->Return                           |
-      |                                                          |
-      v                                                          |
-[Middleware Chain]                                               |
-      |                                                          |
-      +-->For Each Middleware:                                   |
-      |         |                                               |
-      |         v                                               |
-      |    Execute Middleware                                   |
-      |         |                                               |
-      |         +--Headers Sent?---->Return                     |
-      |         |                                               |
-      |         +--Update Context                               |
-      |                                                         |
-      v                                                         |
-[Check Headers Sent]----Yes---->Return                          |
-      |                                                         |
-      v                                                         |
-[Execute Handler]----Output                                     |
-      |              |                                          |
-      |              v                                          |
-      |         [Check Headers Sent]                            |
-      |              |                                          |
-      |              +--Yes---->onDualResponseDetected(output)  |
-      |              |                                          |
-      |              +--No----->onComplete(output)              |
-      |                                                         |
-      v                                                         |
-[Any Error Occurs]<-------------------------------------------|
-      |
-      v
-[Catch Block]
-      |
-      v
+```ascii [expandable] {19, 34, 39, 41, 52, 54}
+Start Request]
+    |
+    v
+[Initialize Context]
+    |
+    v
+[Validation/Middleware Loop (Ordered)]
+    |
+    +-- For each item in order (Validation or Middleware):
+    |    |
+    |    v
+    |    [Is it Validation?]
+    |        |
+    |        +-- Yes: [Parse Validation (body/query/params)]
+    |        |        |
+    |        |        +-- Error?
+    |        |            |
+    |        |            v
+    |        |            [ZodError] --> onSchemaErr(error, conn)
+    |        |                        |
+    |        |                        +-- Headers Sent? --> Return
+    |        |                        |
+    |        |                        +-- Not Sent --> Log & Re-throw Err
+    |        |
+    |        +-- No: [Execute Middleware]
+    |                 |
+    |                 v
+    |                 [Middleware Function] --> Update Context
+    |                 |
+    |                 +-- Headers Sent? --> Return
+    |
+    |
+    v
+[Execute Handler (User-provided)] --> Output
+    |
+    v
 [Check Headers Sent]
-      |
-      +--Yes---->onDualResponseDetected(error)
-      |
-      +--No----->onErr(error)
+    |
+    +-- Yes --> onPostResponse(output, conn, next)
+    |
+    +-- No --> onComplete(output, conn, next)
+    |
+    v
+[Error Occurs (Anywhere above)]
+    |
+    v
+[Catch Block]
+    |
+    v
+[Check Headers Sent]
+    |
+    +-- Yes --> onPostResponse(error, conn, next)
+    |
+    +-- No --> onErr(error, conn, next)
 ```
+
 </Tab>
 
 <Tab title="code version">
 
-```ts {8, 14, 23, 27, 35, 38, 44}
+```ts [expandable] {8, 14, 23, 27, 31, 34, 36}
 this.initializeContext<Reply>(req); // with `{}`
 const conn = { req, res };
 try {
@@ -305,7 +312,7 @@ try {
     for (const ref of this.order) {
         if (typeof ref === "string") {
             // Data validation middleware
-            await this.parse(conn, ref);
+            await this.parse(conn, ref); // calls onSchemaErr on error
         } else {
             // 'use' middleware
             const useFn = this.useHandlers[ref]!;
@@ -324,22 +331,14 @@ try {
 
     if (res.headersSent) {
         if (output !== undefined) {
-            await this.handlers.onDualResponseDetected(
-                output,
-                conn,
-                next,
-            );
+            await this.handlers.onPostResponse(output, conn, next);
         }
         return;
     }
     await this.handlers.onComplete(output, conn, next);
 } catch (err: unknown) {
     if (res.headersSent) {
-        return await this.handlers.onDualResponseDetected(
-            err,
-            conn,
-            next,
-        );
+        return await this.handlers.onPostResponse(err, conn, next);
     }
     return await this.handlers.onErr(err, conn, next);
 }
@@ -347,7 +346,6 @@ try {
 
 </Tab>
 </Tabs>
-
 
 That's pretty much what `Suvidha` is. It just facilitates the flow by adding a layer of abstraction and type-safety.
 `Handlers` have the control over how you process the request and response.

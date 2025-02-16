@@ -6,8 +6,8 @@
 
 I work with [typescript](https://www.typescriptlang.org/) and [Express.js](https://expressjs.com/) a lot. There were couple of things I wanted,
 
--   **Type-safe** request handling.
--   Easy response handling.
+- **Type-safe** request handling.
+- Easy response handling.
 
 And I was not looking for a solution that will Hack over Express.js like [Nest.js](https://nestjs.com/).
 Something easy to plugin and unplug.
@@ -16,8 +16,8 @@ Something easy to plugin and unplug.
 
 Suvidha is a TypeScript library improves Express.js experience by providing:
 
--   Type-safe request handling using [Zod](https://zod.dev/)
--   Easy response handling
+- Type-safe request handling using [Zod](https://zod.dev/)
+- Easy response handling
 
 ![Suvidha's Flow](suvidha_flow.png "Suvidha Flow")
 
@@ -127,7 +127,7 @@ Both of the above examples produce the same output:
 
 ## Glossary
 
--   **Connection**: The connection object is an object that contains the request and response objects.
+- **Connection**: The connection object is an object that contains the request and response objects.
 
     ```typescript
     // simplified version
@@ -137,11 +137,11 @@ Both of the above examples produce the same output:
     };
     ```
 
--   **Handlers**: The handlers object is an object that contains the `onErr()`, `onSchemaErr()`, `onComplete()`, and `onUncaughtData()` functions.
--   **Pipe**: The pipe is a middleware that validates the request, and calls `next()` if the validation succeeds.
-    Otherwise, it calls `onSchemaErr()` which is an optional callback function that you can define.
--   **Suvidha**: It's Hindi term for **Facility**.
--   **Prayog**: It's Hindi term for **Use**.
+- **Handlers**: The handlers object is an object that contains the `onErr()`, `onSchemaErr()`, `onComplete()`, and `onUncaughtData()` functions.
+- **Pipe**: The pipe is a middleware that validates the request, and calls `next()` if the validation succeeds.
+  Otherwise, it calls `onSchemaErr()` which is an optional callback function that you can define.
+- **Suvidha**: It's Hindi term for **Facility**.
+- **Prayog**: It's Hindi term for **Use**.
 
 ## Let's talk about Pipe a bit
 
@@ -196,61 +196,3 @@ Please make sure to update tests as appropriate.
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
-
-
-```ascii
-[Start Request]
-      |
-      v
-[Parse Validation]----Error?----+
-      |                          |
-      |                          v
-      |                     [ZodError]---->onSchemaErr()
-      |                                        |
-      |                                        +--Headers Sent?---->Return
-      |                                        |
-      |                                        +--Not Sent---->Log & Throw
-      |                                                            |
-      v                                                           |
-[Check Headers Sent]----Yes---->Return                           |
-      |                                                          |
-      v                                                          |
-[Middleware Chain]                                               |
-      |                                                          |
-      +-->For Each Middleware:                                   |
-      |         |                                               |
-      |         v                                               |
-      |    Execute Middleware                                   |
-      |         |                                               |
-      |         +--Headers Sent?---->Return                     |
-      |         |                                               |
-      |         +--Update Context                               |
-      |                                                         |
-      v                                                         |
-[Check Headers Sent]----Yes---->Return                          |
-      |                                                         |
-      v                                                         |
-[Execute Handler]----Output                                     |
-      |              |                                          |
-      |              v                                          |
-      |         [Check Headers Sent]                            |
-      |              |                                          |
-      |              +--Yes---->onDualResponseDetected(output)  |
-      |              |                                          |
-      |              +--No----->onComplete(output)              |
-      |                                                         |
-      v                                                         |
-[Any Error Occurs]<-------------------------------------------|
-      |
-      v
-[Catch Block]
-      |
-      v
-[Check Headers Sent]
-      |
-      +--Yes---->onDualResponseDetected(error)
-      |
-      +--No----->onErr(error)
-```
-
-
