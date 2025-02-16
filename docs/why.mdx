@@ -1,10 +1,10 @@
 ---
-title: Design
-description: Suvidha's Design
-icon: 'scribble'
+title: "Why Suvidha?"
+description: "Building type-safe Express APIs without boilerplate"
+icon: "puzzle-piece"
 ---
 
-Suvidha is designed for type-safety and better developer experience with Express.js.
+Suvidha is designed for type safety and better developer experience with Express.js.
 
 Let's take a look at the typical flow of a request and response handling.
 
@@ -133,9 +133,9 @@ Popular solutions:
 - [`asyncHandler()`](https://www.google.com/search?q=async+handler) to avoid `try-catch` boilerplate
 - [extend](https://www.google.com/search?q=how+to+add+user+info+to+express+request) Express' Request interface globally to add `user`
 
-It's a patch work to add `user` property to `Request` interface globally.
-Types are not inferred by typescript, middlewares and request handlers are acting independently,
-and on leap of faith that everyone is doing their job right.
+It's patchwork to add `user` property to `Request` interface globally.
+Types are not inferred by typescript, middlewares and request handlers act independently,
+and on a leap of faith that everyone is doing their job right.
 
 Suvidha is a wrapper around your request handler, that addresses all these type-safety issues.
 
@@ -222,13 +222,13 @@ export type BookDto = z.infer<typeof BookSchema>;
 </Tab>
 
 </Tabs>
-If you notice, we never used `_res: Response` anywhere to send response, 
+If you noticed, we never used `_res: Response` anywhere to send response, 
 because that's handled by `Handlers` for us. If you want to send a response manually,
 you can still do `res.send()` and it will work fine.
 
 
 To understand how `Suvidha` facilitates this, let's look at the flow.
-Though code version of it is easier to understand in my opinion.
+Though the code version of it is easier.
 
 
 Lines are highlighted wherever the `Handlers` are called incluing request handler.
@@ -297,26 +297,29 @@ Lines are highlighted wherever the `Handlers` are called incluing request handle
 
 <Tab title="code version">
 
-```ts {5, 20, 24, 32, 35, 41}
-// This is the Suvidha.handler() method
+```ts {8, 14, 23, 27, 35, 38, 44}
+this.initializeContext<Reply>(req); // with `{}`
 const conn = { req, res };
 try {
-    // parse() calls onSchemaErr() handler on validation error
-    await this.parse(conn);
-    /* If validation layer completes the response, don't go to next layers */
-    if (res.headersSent) return;
+    // execute middlewares in the declaration order
+    for (const ref of this.order) {
+        if (typeof ref === "string") {
+            // Data validation middleware
+            await this.parse(conn, ref);
+        } else {
+            // 'use' middleware
+            const useFn = this.useHandlers[ref]!;
+            req.context = {
+                ...req.context,
+                ...(await useFn(conn)),
+            };
+        }
 
-    // Run middlewares sequentially
-    for (const useFn of this.useHandlers) {
-        req.context = {
-            ...req.context,
-            ...(await useFn(conn)),
-        };
         /* If any of the middleware completes the response */
         if (res.headersSent) return;
     }
 
-    // request handler
+    // run the request handler
     const output = await handler(req, res, next);
 
     if (res.headersSent) {
@@ -346,5 +349,5 @@ try {
 </Tabs>
 
 
-That's pretty much `Suvidha` is. It just facilitates the flow by adding a layer of abstraction and type-safety.
+That's pretty much what `Suvidha` is. It just facilitates the flow by adding a layer of abstraction and type-safety.
 `Handlers` have the control over how you process the request and response.
