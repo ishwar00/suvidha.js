@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { Conn, Handlers } from "./Handlers";
 import { isProtocol, Http, StatusCodes, Meta } from "./http";
 import util from "util";
+import { NextFunction } from "express";
 
 type ResonseFormat = {
     status: "error" | "success" | "fail";
@@ -65,7 +66,11 @@ export class DefaultHandlers implements Handlers {
             .send(this.fmt(statusCode, "Internal Server Error", {}));
     }
 
-    onSchemaErr(_err: ZodError, _conn: Conn): Promise<void> | void {
+    onSchemaErr(
+        _err: ZodError,
+        _conn: Conn,
+        _next: NextFunction,
+    ): Promise<void> | void {
         throw Http.BadRequest.body(
             "Data provided does not meet the required format.",
         );

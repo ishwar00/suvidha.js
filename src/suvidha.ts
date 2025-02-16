@@ -1,5 +1,5 @@
 import { z, ZodError } from "zod";
-import { Response, Request } from "express";
+import { Response, Request, NextFunction } from "express";
 import * as core from "express-serve-static-core";
 import { Conn, Handlers } from "./Handlers";
 import { _Readonly, Merge } from "./utils.type";
@@ -90,12 +90,12 @@ export class Suvidha<
         );
     }
 
-    private async parse(conn: Conn, ref: DataRef) {
+    private async parse(ref: DataRef, conn: Conn, next: NextFunction) {
         try {
             conn.req[ref] = this.schemaMap[ref].parse(conn.req[ref]);
         } catch (err: unknown) {
             this.assertZodError(err);
-            await this.handlers.onSchemaErr(err, conn);
+            await this.handlers.onSchemaErr(err, conn, next);
 
             if (!conn.res.headersSent) {
                 console.warn(
@@ -141,7 +141,7 @@ export class Suvidha<
             try {
                 for (const ref of this.order) {
                     if (typeof ref === "string") {
-                        await this.parse(conn, ref);
+                        await this.parse(ref, conn, next);
                     } else {
                         const useFn = this.useHandlers[ref]!;
                         req.context = {

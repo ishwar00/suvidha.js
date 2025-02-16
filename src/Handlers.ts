@@ -22,31 +22,36 @@ export type Conn<
  */
 export interface Handlers {
     /**
-     * Called when handler throws exception
-     * it **must** not throw any exception, if it does application might crash
-     * if no global error handlers are present
+     * Called when an error is thrown during middleware or handler execution
+     * *before* any part of the response has been sent (headers or body).
      *
-     * @param err - exception thrown by the `onSchemaErr()`, `handler()` or `use()` middlewares method
-     * @param conn - object contain express' request and response
-     * @param next - express' next function
+     * @param {unknown} err - The error object. This can be of any type.
+     * @param {Conn} conn - The Conn object containing the request and response objects.
+     * @param {NextFunction} next - The Express `next` function. Call `next(err)` to pass the error to the next error handling middleware or Express's default handler.
      */
     onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
 
     /**
-     * Called when data validation fails
-     * It must complete the error response
+     * Called when a Zod schema validation fails (e.g., request body, query parameters,
+     * or path parameters do not match the defined schema).
      *
-     * @param err - ZodError thrown by zod schema
-     * @param conn - object contain express' request and response
+     * @param {ZodError} err - The ZodError object containing details about the validation failure.
+     * @param {Conn} conn - The Conn object containing the request (`conn.req`) and response (`conn.res`) objects.  `conn.req` is a `CtxRequest`, which extends the Express `Request` with a `context` property.
+     * @param {NextFunction} next - The Express `next` function. Call `next(err)` to pass the error to the next error handling middleware or Express's default handler.
      */
-    onSchemaErr(err: ZodError, conn: Conn): Promise<void> | void;
+    onSchemaErr(
+        err: ZodError,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void;
 
     /**
-     * Called when handler function returns
+     * Called when the handler function executes successfully *and* no
+     * part of the response (headers or body) has been sent yet.
      *
-     * @param output - value returned by the handler function
-     * @param conn - object contain express' request and response
-     * @param next - express' next function
+     * @param {unknown} output - The value returned by the handler function. This can be of any type.
+     * @param {Conn} conn - The `Conn` object containing the request and response objects.
+     * @param {NextFunction} next - The Express `next` function.  While available, it's typically not needed in `onComplete`.
      */
     onComplete(
         output: unknown,
@@ -55,14 +60,18 @@ export interface Handlers {
     ): Promise<void> | void;
 
     /**
-     * Called when handler returns the value(other than `undefined`) or throws exception
-     * when `import('express').Request.headersSent` is `true`.
+     * NOTE: `res.send()`, `res.json()` any method that sends the headers or body is
+     * considered initiating the response.
      *
-     * It is way to detect if there has been any attempt to send response twice.
+     * Called when something happens *after* a response has started (headers sent).
+     * This can be:
+     *  * Errors thrown by middleware *after* using `conn.res.send()`.
+     *  * Errors thrown by the handler *after* using `res.send()`.
+     *  * The handler returning a value *after* using `res.send()`. (This is primarily for bug detection).
      *
-     * @param outputOrErr - output or exception thrown by the handler
-     * @param conn - object contain express' request and response
-     * @param next - express' next function
+     * @param {unknown} outputOrErr - Either the error object (if an error occurred) or the returned value from the handler (if the handler returned a value after sending the response).  The type will be `unknown`.
+     * @param {Conn} conn - The `Conn` object containing the request and response objects.
+     * @param {NextFunction} next - The Express `next` function. While available, it's typically not needed in `onPostResponse`.
      */
     onPostResponse(
         outputOrErr: unknown,
