@@ -64,7 +64,7 @@ export interface Handlers {
      * @param conn - object contain express' request and response
      * @param next - express' next function
      */
-    onDualResponseDetected(
+    onPostResponse(
         outputOrErr: unknown,
         conn: Conn,
         next: NextFunction,

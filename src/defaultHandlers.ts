@@ -32,7 +32,7 @@ export const defaultFormatter: Formatter = (status, body, meta) => {
 };
 
 export class DefaultHandlers implements Handlers {
-    constructor(private readonly fmt: Formatter = defaultFormatter) { }
+    constructor(private readonly fmt: Formatter = defaultFormatter) {}
 
     static create(fmt?: Formatter) {
         return new DefaultHandlers(fmt);
@@ -106,9 +106,9 @@ export class DefaultHandlers implements Handlers {
         }
     }
 
-    onDualResponseDetected(data: unknown, _: Conn): Promise<void> | void {
+    onPostResponse(data: unknown, _: Conn): Promise<void> | void {
         console.log(
-            `Suvidha(onDualResponseDetected): ${util.inspect(data, { depth: 10 })}`,
+            `Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`,
         );
     }
 }

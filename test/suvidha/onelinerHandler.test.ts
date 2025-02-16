@@ -10,7 +10,7 @@ describe("Suvidha Library", () => {
     let app: express.Express;
     let mockHandlers: jest.Mocked<Handlers>;
 
-    class UnreachableErr extends Error { }
+    class UnreachableErr extends Error {}
 
     beforeEach(() => {
         app = express();
@@ -30,15 +30,13 @@ describe("Suvidha Library", () => {
                 }
                 conn.res.status(500).json({ error: err.message });
             }),
-            onDualResponseDetected: jest
-                .fn()
-                .mockImplementation((_errOrOutput, _) => {
-                    console.warn("Dual response detected: ", _errOrOutput);
-                    if (_errOrOutput instanceof UnreachableErr) {
-                        throw _errOrOutput;
-                    }
-                    return _errOrOutput;
-                }),
+            onPostResponse: jest.fn().mockImplementation((_errOrOutput, _) => {
+                console.warn("Dual response detected: ", _errOrOutput);
+                if (_errOrOutput instanceof UnreachableErr) {
+                    throw _errOrOutput;
+                }
+                return _errOrOutput;
+            }),
         };
     });
 
@@ -158,9 +156,9 @@ describe("Suvidha Library", () => {
             const response = await request(app).get("/test").expect(200);
             expect(response.body).toEqual({ viaRes: true });
 
-            expect(
-                mockHandlers.onDualResponseDetected.mock.results[0]?.value,
-            ).toEqual({ viaReturn: true });
+            expect(mockHandlers.onPostResponse.mock.results[0]?.value).toEqual({
+                viaReturn: true,
+            });
         });
     });
 
@@ -190,9 +188,9 @@ describe("Suvidha Library", () => {
             const response = await request(app).get("/test").expect(200);
             expect(response.body).toEqual({ success: true });
 
-            expect(
-                mockHandlers.onDualResponseDetected.mock.results[0]?.value,
-            ).toEqual(new Error("Post-send error"));
+            expect(mockHandlers.onPostResponse.mock.results[0]?.value).toEqual(
+                new Error("Post-send error"),
+            );
         });
     });
 

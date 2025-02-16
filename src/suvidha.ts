@@ -34,7 +34,7 @@ export class Suvidha<
         query: z.any(),
     };
 
-    constructor(private readonly handlers: Handlers) { }
+    constructor(private readonly handlers: Handlers) {}
 
     static create(handlers: Handlers) {
         return new Suvidha(handlers);
@@ -84,17 +84,15 @@ export class Suvidha<
         }
         throw new Error(
             "Suvidha internal error: data validation layer did not throw ZodError." +
-            "\n Please create an issue at https://github.com/ishwar00/suvidha.js/issues" +
-            "\n ====== Error Log ======\n" +
-            err,
+                "\n Please create an issue at https://github.com/ishwar00/suvidha.js/issues" +
+                "\n ====== Error Log ======\n" +
+                err,
         );
     }
 
     private async parse(conn: Conn, ref: DataRef) {
         try {
-            conn.req[ref] = this.schemaMap[ref].parse(
-                conn.req[ref],
-            );
+            conn.req[ref] = this.schemaMap[ref].parse(conn.req[ref]);
         } catch (err: unknown) {
             this.assertZodError(err);
             await this.handlers.onSchemaErr(err, conn);
@@ -160,22 +158,14 @@ export class Suvidha<
 
                 if (res.headersSent) {
                     if (output !== undefined) {
-                        await this.handlers.onDualResponseDetected(
-                            output,
-                            conn,
-                            next,
-                        );
+                        await this.handlers.onPostResponse(output, conn, next);
                     }
                     return;
                 }
                 await this.handlers.onComplete(output, conn, next);
             } catch (err: unknown) {
                 if (res.headersSent) {
-                    return await this.handlers.onDualResponseDetected(
-                        err,
-                        conn,
-                        next,
-                    );
+                    return await this.handlers.onPostResponse(err, conn, next);
                 }
                 return await this.handlers.onErr(err, conn, next);
             }

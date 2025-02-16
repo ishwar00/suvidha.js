@@ -1,36 +1,37 @@
 {
-  "name": "suvidha",
-  "version": "1.0.0",
-  "description": "validation layer for requests in express",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "directories": {
-    "doc": "docs",
-    "example": "examples",
-    "test": "test"
-  },
-  "files": [
-    "/dist"
-  ],
-  "scripts": {
-    "test": "jest --testTimeout=12000",
-    "build": "npx tsc --noEmit"
-  },
-  "author": "ishwar",
-  "license": "ISC",
-  "devDependencies": {
-    "@babel/core": "^7.25.2",
-    "@babel/preset-env": "^7.25.4",
-    "@babel/preset-typescript": "^7.24.7",
-    "@types/jest": "^29.5.12",
-    "babel-jest": "^29.7.0",
-    "express": "^4.21.2",
-    "jest": "^29.7.0",
-    "supertest": "^7.0.0",
-    "typescript": "^5.5.4"
-  },
-  "dependencies": {
-    "@types/express": "^4.17.21",
-    "zod": "^3.23.8"
-  }
+    "name": "suvidha",
+    "version": "1.0.0",
+    "description": "validation layer for requests in express",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "directories": {
+        "doc": "docs",
+        "example": "examples",
+        "test": "test"
+    },
+    "files": [
+        "/dist"
+    ],
+    "scripts": {
+        "test": "jest --testTimeout=12000",
+        "fmt": "npx prettier --write .",
+        "build": "npx tsc --noEmit"
+    },
+    "author": "ishwar",
+    "license": "ISC",
+    "devDependencies": {
+        "@babel/core": "^7.25.2",
+        "@babel/preset-env": "^7.25.4",
+        "@babel/preset-typescript": "^7.24.7",
+        "@types/jest": "^29.5.12",
+        "babel-jest": "^29.7.0",
+        "express": "^4.21.2",
+        "jest": "^29.7.0",
+        "supertest": "^7.0.0",
+        "typescript": "^5.5.4"
+    },
+    "dependencies": {
+        "@types/express": "^4.17.21",
+        "zod": "^3.23.8"
+    }
 }
