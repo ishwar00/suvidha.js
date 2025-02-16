@@ -350,17 +350,29 @@ app.post(
 ```
 
 ## Suvidha as data validation middleware
-To use Suvidha solely for data validation with TypeScript inference, use the `DefaultHandlers` class and customize error responses as needed.
+To use Suvidha solely for data validation with TypeScript inference, implement `onSchemaErr` method.
 
-```ts {27}
+```ts {38}
 // Customize the error response
-class CustomHandlers extends DefaultHandlers {
-    override onSchemaErr(_: ZodError, conn: Conn) {
+class CustomHandlers implements Handlers {
+    onSchemaErr(_: ZodError, conn: Conn) {
         const fmt = {
             success: false,
             error: "VALIDATION_FAILURE",
-        }
+        };
         conn.res.status(400).json(fmt);
+    }
+
+    onErr(): Promise<void> | void {
+        throw new Error("Method not implemented.");
+    }
+
+    onComplete(): Promise<void> | void {
+        throw new Error("Method not implemented.");
+    }
+
+    onDualResponseDetected(): Promise<void> | void {
+        throw new Error("Method not implemented.");
     }
 }
 
@@ -390,7 +402,7 @@ app.post(
 If you have common middlewares accross multiple routes, you can create a `Suvidha` instance and reuse it.
 
 ```ts {8, 25, 34}
-import { Suvidha, DefaultHandlers, Http } from "../src";
+import { Suvidha, DefaultHandlers, Http } from "suvidha";
 
 declare function authenticate(req: any): Promise<{ role: string }>;
 
