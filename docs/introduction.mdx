@@ -74,9 +74,9 @@ const suvidha = () => Suvidha.create(new DefaultHandlers(formatter));
 app.post(
   "/users",
   suvidha()
-    .body(UserSchema) // Validate request body first
-    .use(authenticate) // Then authenticate
-    .use(roleCheck) // Then check permissions
+    .use(authenticate) // authenticate
+    .use(roleCheck) // check permissions
+    .body(UserSchema) // Validate request body
     .handler(async (req) => {
       // All validation/security passed
       const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
