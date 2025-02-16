@@ -97,11 +97,11 @@ export class DefaultHandlers implements Handlers {
                     .send(this.fmt(StatusCodes.OK, output ?? null, {}));
             }
             default: {
-                const err = {
+                console.error({
                     cause: output,
                     description: `Suvidha: Can't proccess values of type ${typeof output}.`,
-                };
-                throw Http.InternalServerError.body(err);
+                });
+                throw new Http.InternalServerError();
             }
         }
     }

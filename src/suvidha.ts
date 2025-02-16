@@ -90,10 +90,10 @@ export class Suvidha<
         );
     }
 
-    private async parse(conn: Conn, dataRef: DataRef) {
+    private async parse(conn: Conn, ref: DataRef) {
         try {
-            conn.req[dataRef] = this.schemaMap[dataRef].parse(
-                conn.req[dataRef],
+            conn.req[ref] = this.schemaMap[ref].parse(
+                conn.req[ref],
             );
         } catch (err: unknown) {
             this.assertZodError(err);
