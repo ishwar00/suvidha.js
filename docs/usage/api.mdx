@@ -33,7 +33,11 @@ interface to define handlers for `onSchemaErr`, `onComplete`, `onPostResponse` a
 
 ```ts
 interface Handlers {
-    onSchemaErr(err: ZodError, conn: Conn): Promise<void> | void;
+    onSchemaErr(
+        err: ZodError,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void;
     onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
     onComplete(
         output: unknown,
@@ -398,7 +402,7 @@ const userSchema = z.object({
 });
 
 // call the next middleware
-const pass = (_: any, __: any, next: NextFunction) => next();
+const pass = (_: any, __: any, next: NextFunction) => void next();
 
 app.post(
     "/users",
