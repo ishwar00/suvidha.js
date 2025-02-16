@@ -4,12 +4,22 @@ import { StatusCodes } from "./statusCodes";
 export type Headers = Record<string, string>;
 export type Meta = unknown;
 
-export type Protocol = {
+/**
+ * The `Protocol` type defines the structure of an HTTP response. It can be used
+ * to construct responses either directly as a plain object or indirectly
+ * through the `Http` classes.
+ *
+ * @property {any} body - The response body.  This can be a string, an object, or any other data that you want to send in the response.
+ * @property {number} status - The HTTP status code (e.g., 200, 404, 500).
+ * @property {Headers} [headers] - Optional response headers.  This is a record (object) where the keys are header names and the values are header values.
+ * @property {Meta} [meta] - Optional metadata associated with the response. This can be any data you want to include that's not part of the main response body.
+ */
+export interface Protocol {
     body: any;
     status: number;
     headers?: Headers;
     meta?: Meta;
-};
+}
 
 const ProtocolSchema = z.object({
     body: z.union([z.string(), z.record(z.unknown())]),
@@ -22,43 +32,82 @@ export function isProtocol(obj: unknown): obj is Protocol {
     return ProtocolSchema.strict().safeParse(obj).success;
 }
 
-// TODO: replace `body` with `data` to map stand response format, becuase `meta` maps to `meta` in standard response format
 export namespace Http {
-    // TODO: document
+    /**
+     * The `Http.End` class is the base class for all HTTP response classes.
+     * It encapsulates the core properties of an HTTP response, including the body,
+     * status code, headers, and metadata. You typically won't use `Http.End` directly,
+     * but it's important to understand its structure as it's the foundation for
+     * other more specific response classes.
+     */
     export class End {
+        /**
+         * @param {Protocol} protocol - The protocol object containing the response details.
+         */
         constructor(protected readonly protocol: Protocol) {
             this.protocol.headers = this.protocol.headers ?? {};
             this.protocol.meta = this.protocol.meta ?? {};
         }
 
-        meta(meta: Meta) {
+        /**
+         * Sets the metadata for the response.
+         * @param {Meta} meta - The metadata object.
+         * @returns {Http.End} - The current Http.End instance for chaining.
+         */
+        meta(meta: Meta): Http.End {
             this.protocol.meta = meta;
             return this;
         }
 
-        headers(headers: Headers) {
+        /**
+         * Sets the headers for the response.
+         * @param {Headers} headers - The headers object.
+         * @returns {Http.End} - The current Http.End instance for chaining.
+         */
+        headers(headers: Headers): Http.End {
             this.protocol.headers = headers;
             return this;
         }
 
-        header(key: string, value: string) {
+        /**
+         * Sets a single header for the response.
+         * @param {string} key - The header key.
+         * @param {string} value - The header value.
+         * @returns {Http.End} - The current Http.End instance for chaining.
+         */
+        header(key: string, value: string): Http.End {
             this.protocol.headers![key] = value;
             return this;
         }
 
-        getStatus() {
+        /**
+         * Gets the HTTP status code.
+         * @returns {number} - The HTTP status code.
+         */
+        getStatus(): number {
             return this.protocol.status;
         }
-
-        getBody() {
+        /**
+         * Gets the response body.
+         * @returns {any} - The response body.
+         */
+        getBody(): any {
             return this.protocol.body;
         }
 
-        getMeta() {
+        /**
+         * Gets the response metadata.
+         * @returns {Meta} - The metadata object.
+         */
+        getMeta(): Meta {
             return this.protocol.meta!;
         }
 
-        getHeaders() {
+        /**
+         * Gets the response headers.
+         * @returns {Headers} - The headers object.
+         */
+        getHeaders(): Headers {
             return this.protocol.headers!;
         }
     }

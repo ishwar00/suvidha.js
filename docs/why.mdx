@@ -200,7 +200,7 @@ async function authorize(conn: Conn<{ user: User }>) {
 <Tab title="handlers">
 
 ```ts
-// Framework-agnostic business logic
+// loosely coupled business logic
 async function handler(book: BookDto, user: User) {
   // create book logic
   return {
