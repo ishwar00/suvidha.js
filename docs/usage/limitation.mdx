@@ -1,0 +1,46 @@
+---
+title: Limitations
+icon: "triangle-exclamation"
+---
+
+While Suvidha enhances Express.js with type safety and structure, it has some intentional trade-offs:
+
+### 1. **TypeScript Required**
+   - Designed for TypeScript. Pure JavaScript projects won’t benefit from type inference or validation.
+
+---
+
+### 2. **Zod Dependency**
+   - Relies on Zod for validation. Alternative libraries (Joi, Yup) aren’t natively supported.
+
+---
+
+### 3. **Global Middleware Compatibility**
+   - Express global middleware (e.g., `app.use(cors())`) won’t extend Suvidha’s typed context.
+
+---
+
+### 4. **Response Control**
+   - Mixing `res.send()` and Suvidha’s `Http` classes can trigger dual-response warnings.
+   - Prefer returning data or throwing errors instead of manual response handling.
+
+---
+
+### 5. **Custom Handlers Require Boilerplate**
+   - To use `Http` classes or `Protocol` objects in custom handlers, you must implement:
+     ```ts
+     interface Handlers {
+       onComplete(output: unknown, conn: Conn): void;
+       // ...other methods
+     }
+     ```
+
+---
+
+### 8. **Learning Curve**
+   - Requires understanding of Zod, type chaining, and Suvidha’s flow (vs raw Express).
+
+---
+
+**Why These Trade-Offs?**  
+Suvidha prioritizes **type safety** and **predictable flow** over flexibility. It’s ideal for teams valuing strict contracts over Express’s "anything goes" approach.
