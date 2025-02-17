@@ -1,5 +1,6 @@
 ---
 title: "Http Classes"
+icon: "file-code"
 ---
 
 Suvidha's `Http` classes simplify responses. Default handlers support them _and_ plain `Protocol` objects. If you write your own handlers, you need to support these if you want to use them.
@@ -12,7 +13,7 @@ Response structure.
 /**
  * @typedef {object} Protocol
  * @property {any} body - The response body.  This can be a string, an object, or any other data you want to send in the response.
- * @property {number} status - The HTTP status code (e.g., 200).
+ * @property {number} status - The HTTP status code (e.g. 200).
  * @property {Headers} [headers] - Optional response headers.  A record where keys are header names and values are header values.
  * @property {Meta} [meta] - Optional metadata associated with the response.
  */
@@ -21,7 +22,7 @@ export interface Protocol {
     status: number;
     headers?: Headers;
     meta?: Meta;
-};
+}
 ```
 
 ### Using the `Http` Classes
@@ -97,7 +98,7 @@ export class End {
         return this.protocol.status;
     }
     /**
-     * Gets the response body.
+     * Gets reference to the response body.
      * @returns {any} - The response body.
      */
     getBody(): any {

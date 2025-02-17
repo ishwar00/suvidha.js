@@ -53,8 +53,8 @@ export class DefaultHandlers implements Handlers {
     onErr(err: unknown, conn: Conn): Promise<void> | void {
         if (err instanceof Http.End) {
             const statusCode = err.getStatus();
-
             this.setHeaders(conn, err.getHeaders());
+
             return void conn.res
                 .status(statusCode)
                 .send(this.fmt(statusCode, err.getBody(), err.getMeta()));
@@ -77,10 +77,9 @@ export class DefaultHandlers implements Handlers {
     }
 
     onComplete(output: unknown, conn: Conn): Promise<void> | void {
-        output =
-            isProtocol(output) && !(output instanceof Http.End)
-                ? new Http.End(output)
-                : output;
+        if (isProtocol(output) && !(output instanceof Http.End)) {
+            output = new Http.End(output);
+        }
 
         if (output instanceof Http.End) {
             const statusCode = output.getStatus();

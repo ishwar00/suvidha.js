@@ -10,7 +10,7 @@ export type Meta = unknown;
  * through the `Http` classes.
  *
  * @property {any} body - The response body.  This can be a string, an object, or any other data that you want to send in the response.
- * @property {number} status - The HTTP status code (e.g., 200, 404, 500).
+ * @property {number} status - The HTTP status code (e.g. 200).
  * @property {Headers} [headers] - Optional response headers.  This is a record (object) where the keys are header names and the values are header values.
  * @property {Meta} [meta] - Optional metadata associated with the response. This can be any data you want to include that's not part of the main response body.
  */

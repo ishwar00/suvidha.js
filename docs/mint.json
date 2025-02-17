@@ -22,7 +22,7 @@
         },
         {
             "group": "Usage",
-            "pages": ["usage/api", "usage/usage"]
+            "pages": ["usage/api", "usage/usage", "usage/limitation"]
         },
         {
             "group": "Reference",

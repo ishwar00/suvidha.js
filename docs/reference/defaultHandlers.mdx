@@ -1,98 +1,209 @@
 ---
 title: "DefaultHandlers"
+icon: "box"
 ---
 
-# Default Handlers Deep Dive
+Suvidha provides default handlers that manage the request/response lifecycle.
+These handlers support the `Http` classes and plain `Protocol` objects for responses.
+You can customize the _response body_ format using a formatter function.
 
-## Response Format
+### The `Formatter` Function
 
-`DefaultHandlers` work out of the box with [`Http`](/reference/http) classes provided by `suvidha`.
+The `Formatter` function is used to structure the final HTTP _response body_.
+It takes the status code, body, and metadata as arguments and returns the formatted _response body_.
 
-```ts
-interface StandardResponse {
-    status: "success" | "fail" | "error";
-    data: unknown;
-    meta: Record<string, unknown>;
-}
+```typescript
+export type Formatter = (status: number, body: unknown, meta?: Meta) => any;
 ```
 
-| Key    | Type                                         | Description                                 |
-| ------ | -------------------------------------------- | ------------------------------------------- |
-| status | `'success'` &#124; `'fail'` &#124; `'error'` | The status of the response                  |
-| data   | `unknown`                                    | The actual response payload                 |
-| meta   | `Record<string, unknown>`                    | Additional metadata related to the response |
+Suvidha provides a default formatter:
 
-#### Status Flags
+```typescript [expandable]
+export const defaultFormatter: Formatter = (status, body, meta) => {
+    const mapToStatus = (statusCode: number): ResonseFormat["status"] => {
+        if (statusCode >= 400 && statusCode < 500) {
+            // Client error
+            return "fail";
+        } else if (statusCode >= 500) {
+            // Server error
+            return "error";
+        } else {
+            return "success";
+        }
+    };
 
-| Type      | Description                                                                                                                                  |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `success` | All went well, and (usually) some data was returned.                                                                                         |
-| `fail`    | There was a problem with the data submitted, or some pre-condition of the API call wasn't satisfied. It's client error status code is `4xx`. |
-| `error`   | An error occurred in processing the request, i.e. an exception was thrown. It's server error status code is `5xx`.                           |
-
-### Example Responses
-
-<Tabs>
-
-<Tab title="Bad Request">
-
-```json
-{
-    "status": "fail",
-    "data": "username already exists.",
-    "meta": {}
-}
+    return {
+        status: mapToStatus(status),
+        data: body,
+        meta,
+    } satisfies ResonseFormat;
+};
 ```
 
-</Tab>
+The default formatter creates a `{ status, data, meta }` object, mapping HTTP status codes:
 
-<Tab title="handler">
-    
-```ts
-app.post(
-    "/users/:id",
-    suvidha()
-        .body(z.object({ username: z.string().min(3) }))
-        .handler(async (req) => {
-            const { username } = req.body;
-            return await Users.create({ username }).catch((_) => {
-                throw Http.BadRequest.body("username already exists.");
-            });
-        }),
-);
+| HTTP Status Code Range | `status` Field Value | Description                                    |
+| ---------------------- | -------------------- | ---------------------------------------------- |
+| 1xx\, 2xx\, 3xx        | `"success"`          | Successful requests or informational responses |
+| 4xx                    | `"fail"`             | Client-side errors                             |
+| 5xx                    | `"error"`            | Server-side errors                             |
+
+You can provide a custom formatter when creating `DefaultHandlers`:
+
+```typescript
+const myFormatter: Formatter = (status, body, meta) => {
+    const isDev = process.env.NODE_ENV === "development";
+    // This will be 'body' of the response
+    return {
+        data: body,
+        debug: isDev ? meta : undefined,
+    };
+};
+
+const handlers = new DefaultHandlers(myFormatter);
 ```
 
-</Tab>
-</Tabs>
+### `DefaultHandlers` Class
 
-<Tabs>
-<Tab title="Success">
+The `DefaultHandlers` class implements the `Handlers` interface and provides default
+implementations for handling errors, schema errors, successful responses, and post-response actions.
+Sets `Content-Type` to `application/json` by default.
 
-```json
-{
-    "status": "success",
-    "data": [
-        { "id": 1, "name": "Alice" },
-        { "id": 2, "name": "Bob" }
-    ],
-    "meta": {
-        "requestId": "abc-123"
+```typescript [expandable]
+export class DefaultHandlers implements Handlers {
+    constructor(private readonly fmt: Formatter = defaultFormatter) {}
+
+    static create(fmt?: Formatter) {
+        return new DefaultHandlers(fmt);
+    }
+
+    private setHeaders(conn: Conn, headers: Record<string, string>): void {
+        headers = {
+            "Content-Type": "application/json",
+            ...headers,
+        };
+
+        for (const [key, value] of Object.entries(headers)) {
+            conn.res.setHeader(key, value);
+        }
+    }
+
+    onErr(err: unknown, conn: Conn): Promise<void> | void {
+        if (err instanceof Http.End) {
+            const statusCode = err.getStatus();
+
+            this.setHeaders(conn, err.getHeaders());
+            return void conn.res
+                .status(statusCode)
+                .send(this.fmt(statusCode, err.getBody(), err.getMeta()));
+        }
+
+        const statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
+        conn.res
+            .status(statusCode)
+            .send(this.fmt(statusCode, "Internal Server Error", {}));
+    }
+
+    onSchemaErr(
+        _err: ZodError,
+        _conn: Conn,
+        _next: NextFunction,
+    ): Promise<void> | void {
+        throw Http.BadRequest.body(
+            "Data provided does not meet the required format.",
+        );
+    }
+
+    onComplete(output: unknown, conn: Conn): Promise<void> | void {
+        if (isProtocol(output) && !(output instanceof Http.End)) {
+            output = new Http.End(output);
+        }
+
+        if (output instanceof Http.End) {
+            const statusCode = output.getStatus();
+            this.setHeaders(conn, output.getHeaders());
+
+            return void conn.res
+                .status(statusCode)
+                .send(this.fmt(statusCode, output.getBody(), output.getMeta()));
+        }
+
+        switch (typeof output) {
+            case "string":
+            case "number":
+            case "boolean":
+            case "undefined":
+            case "object": {
+                return void conn.res
+                    .status(StatusCodes.OK)
+                    .send(this.fmt(StatusCodes.OK, output ?? null, {}));
+            }
+            default: {
+                console.error({
+                    cause: output,
+                    description: `Suvidha: Can't proccess values of type ${typeof output}.`,
+                });
+                throw new Http.InternalServerError();
+            }
+        }
+    }
+
+    onPostResponse(data: unknown, _: Conn): Promise<void> | void {
+        console.log(
+            `Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`,
+        );
     }
 }
 ```
 
-</Tab>
-<Tab title="handler">
+#### `onErr(err: unknown, conn: Conn)`
 
-```ts
-app.get(
-    "/users",
-    suvidha().handler(async (req) => {
-        const users = await Users.find();
-        return Http.Ok.body(users).meta({ requestId: "abc-123" });
-    }),
-);
+Handles errors.
+
+- If `err` is an `Http.End` instance, it sends the response with the specified status code, headers, and body (formatted by the formatter).
+- Otherwise, it sends a 500 Internal Server Error response with the default message.
+
+```typescript
+onErr(err: unknown, conn: Conn): Promise<void> | void {
+    if (err instanceof Http.End) { // Http Error
+        // ... (send formatted response based on err)
+    } else { // Generic Error
+        // ... (send 500 Internal Server Error)
+    }
+}
 ```
 
-</Tab>
-</Tabs>
+#### `onSchemaErr(err: ZodError, conn: Conn, next: NextFunction)`
+
+Handles schema validation errors (using Zod). It always throws a `Http.BadRequest` error with a default message.
+
+```typescript
+onSchemaErr(err: ZodError, conn: Conn, next: NextFunction): Promise<void> | void {
+    throw Http.BadRequest.body("Data provided does not meet the required format.");
+}
+```
+
+#### `onComplete(output: unknown, conn: Conn)`
+
+Handles successful responses.
+
+- If `output` is a `Protocol` object (but _not_ an `Http.End` instance), it's wrapped in an `Http.End` object.
+- If `output` is an `Http.End` instance, it sends the response with the specified status code, headers, and body (formatted by the formatter).
+- If `output` is a primitive type (string, number, boolean, undefined(converted to null), object, or null), it sends a 200 OK response with the output as the body (formatted by the formatter).
+- Otherwise, it logs an error and throws a `Http.InternalServerError` exception.
+
+```typescript
+onComplete(output: unknown, conn: Conn): Promise<void> | void {
+    // ... (logic to handle different output types and send the response)
+}
+```
+
+#### `onPostResponse(data: unknown, conn: Conn)`
+
+Called _after_ a response has been sent (headers already sent). Primarily used for logging or cleanup. The default implementation logs the response data.
+
+```typescript
+onPostResponse(data: unknown, conn: Conn): Promise<void> | void {
+    console.log(`Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`);
+}
+```
