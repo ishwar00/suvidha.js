@@ -1,118 +1,66 @@
 ---
-title: Handlers in Action
-description: Practical examples using Default and Custom Handlers
+title: Action
+description: Examples using Default and Custom Handlers
+icon: "code"
 ---
 
-# Using Suvidha Handlers
+## Using and Extending Suvidha's Default Handlers
 
-## Default Handlers Example
+Suvidha's default handlers offer a quick start for request/response management. They handle common tasks and are easily extended.
 
-### User Registration Endpoint
+### Introduction
 
-```typescript Implementation
+Default handlers provide a pre-configured setup. They handle response formatting, errors, and successful requests, letting you focus on your logic. They're ready to use but also customizable.
+
+### Basic Usage
+
+```typescript
+import express from "express";
 import { Suvidha, DefaultHandlers, Http } from "suvidha";
-import { z } from "zod";
 
-const userSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(8),
-    age: z.number().min(18),
-});
+const app = express();
+app.use(express.json());
 
-app.post(
-    "/register",
-    Suvidha.create(DefaultHandlers.create())
-        .body(userSchema)
-        .use(async (conn) => ({
-            ip: conn.req.ip,
-            timestamp: Date.now(),
-        }))
-        .handler((req) => {
-            const user = createUser({
-                email: req.body.email,
-                password: req.body.password,
-                metadata: {
-                    age: req.body.age,
-                    ip: req.context.ip,
-                },
-            });
+const suvidha = () => Suvidha.create(new DefaultHandlers());
 
-            return Http.Created.body(user).meta({
-                registrationTime: req.context.timestamp,
-            });
-        }),
+app.get(
+    "/hello",
+    suvidha().handler(async (req) => {
+        return Http.Ok.body({ message: "Hello, world!" });
+    }),
 );
+
+// Example using a plain Protocol object:
+app.get(
+    "/simple",
+    suvidha().handler(async (req) => {
+        return { status: 200, body: { message: "This is simple." } };
+    }),
+);
+
+app.listen(3000, () => console.log("Server listening on port 3000"));
 ```
 
-<AccordionGroup>
-<Accordion title="Successful Response">
+Default handlers are created with `new DefaultHandlers()`. `suvidha()` uses them to process requests. Your handler function contains your logic. Return data, use `Http` classes, or plain `Protocol` objects for responses.
 
-```json 201 Created
-{
-    "status": "success",
-    "data": {
-        "id": "usr_123",
-        "email": "user@example.com",
-        "metadata": {
-            "age": 25,
-            "ip": "203.0.113.42"
-        }
-    },
-    "meta": {
-        "registrationTime": 1717020404047
-    }
-}
-```
+### Extending
 
-</Accordion>
-<Accordion title="Validation Error Response">
+Extend default handlers for custom behavior. Create a class inheriting from `DefaultHandlers` and override methods.
 
-```json 400 Bad Request
-{
-    "status": "error",
-    "data": "Data provided does not meet the required format.",
-    "meta": {
-        "description": "Data Validation Error",
-        "reason": {
-            "formErrors": [],
-            "fieldErrors": {
-                "password": ["String must contain at least 8 character(s)"]
-            }
-        }
-    }
-}
-```
-
-</Accordion>
-</AccordionGroup>
-
-### Key Features Demonstrated
-
-- Automatic validation error handling
-- Context building with middleware
-- Structured response formatting
-- Meta information in responses
-
----
-
-## Custom Handlers Example
-
-### Simple Custom Handler Implementation
-
-```typescript customHandlers.ts
+```typescript
 import { Handlers, Conn } from "suvidha";
 import { DefaultHandlers } from "./defaultHandlers";
 
 export class SimpleCustomHandlers extends DefaultHandlers implements Handlers {
-    onComplete(output: unknown, conn: Conn) {
+    override onComplete(output: unknown, conn: Conn, next: NextFunction) {
         // Add custom headers to all responses
         conn.res.setHeader("X-API-Version", "2.0");
 
         // Preserve default behavior
-        super.onComplete(output, conn);
+        super.onComplete(output, conn, next);
     }
 
-    onErr(err: unknown, conn: Conn) {
+    override onErr(err: unknown, conn: Conn, next: NextFunction) {
         // Simple error logging
         console.error("[Custom Handler Error]", err);
 
@@ -125,7 +73,7 @@ export class SimpleCustomHandlers extends DefaultHandlers implements Handlers {
 }
 ```
 
-### User Profile Endpoint with Custom Handler
+**User Profile Endpoint with `SimpleCustomHandlers`**
 
 ```typescript Implementation
 app.get(
@@ -189,71 +137,167 @@ X-API-Version: 2.0
 </Tab>
 </Tabs>
 
-### Custom Handler Advantages
+### Customization
 
-- **Response Uniformity**: Added version header to all responses
-- **Error Tracking**: Simple error logging with reference IDs
-- **Custom Formatting**: Modified error response structure
-- **Backward Compatibility**: Extended DefaultHandlers to preserve validation
+#### Logging
 
----
+Override `onComplete` or `onErr`.
 
-## Comparison: Default vs Custom Handlers
+```typescript
+class MyHandlers extends DefaultHandlers {
+    onComplete(output: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+        console.log(
+            `Request completed. Output: ${JSON.stringify(output)}, URL: ${conn.req.originalUrl}`,
+        );
+        return super.onComplete(output, conn, next);
+    }
 
-| Feature               | Default Handlers        | Custom Handlers             |
-| --------------------- | ----------------------- | --------------------------- |
-| **Error Formatting**  | Standard JSON structure | Full customization possible |
-| **Response Headers**  | Basic content headers   | Custom headers supported    |
-| **Error Logging**     | None (console warnings) | Integrated logging          |
-| **Validation Errors** | Automatic Zod handling  | Overridable behavior        |
-| **Setup Complexity**  | Zero configuration      | Requires implementation     |
-| **Best For**          | Rapid prototyping       | Production-critical systems |
-
----
-
-## When to Use Which?
-
-<AccordionGroup>
-<Accordion title="Choose Default Handlers When...">
-
-- Building prototypes or MVPs
-- Need quick API endpoints
-- Standard response format is acceptable
-- Don't need advanced error tracking
-- Working with simple validation needs
-
-</Accordion>
-<Accordion title="Choose Custom Handlers When...">
-
-- Need enterprise-grade error handling
-- Require custom response headers
-- Want integrated logging/monitoring
-- Need to modify default status codes
-- Have security/compliance requirements
-
-</Accordion>
-</AccordionGroup>
-
----
-
-## Migration Tip: Start Default, Go Custom
-
-```mermaid
-graph LR
-  A[New Project] --> B[Default Handlers]
-  B --> C{Need Customization?}
-  C -->|Yes| D[Extend DefaultHandlers]
-  C -->|No| E[Keep Using Defaults]
-  D --> F[Gradually Add Features]
+    onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+        console.error(`Error: ${err}, URL: ${conn.req.originalUrl}`);
+        return super.onErr(err, conn, next);
+    }
+}
 ```
 
-This approach lets you:
+#### Setting Headers
 
-1. Validate core functionality quickly
-2. Add customizations as requirements emerge
-3. Maintain backward compatibility
-4. Avoid premature optimization
+Override `onComplete` or `onErr`.
 
----
+```typescript
+class MyHandlers extends DefaultHandlers {
+    onComplete(output: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+        conn.res.setHeader("Cache-Control", "no-cache");
+        conn.res.setHeader("X-API-Version", "2.0");
+        return super.onComplete(output, conn, next);
+    }
+}
+```
 
-> **Pro Tip**: Always extend `DefaultHandlers` when creating custom handlers to preserve Zod validation and core functionality unless you specifically need to override those behaviors.
+#### Using `next(err)` (Within Suvidha Handlers)
+
+Suvidha handlers receive the `next` function, allowing you to pass errors to Express.js error handling middleware or the default Express.js error handler. This is particularly useful if you have existing error handling logic in Express.js that you want to leverage.
+
+```typescript
+import { DefaultHandlers, Conn, Http } from "suvidha";
+
+class MyHandlers extends DefaultHandlers {
+    onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+        if (err instanceof Http.End) {
+            return super.onErr(err, conn, next); // Default Suvidha error handling
+        }
+
+        return next(err); // Delegate to Express.js error handling
+    }
+}
+```
+
+#### Custom Error Handling
+
+Override `onErr`.
+
+```typescript
+import { Http } from "suvidha"; // Import Http
+
+class MyHandlers extends DefaultHandlers {
+    onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+        if (err instanceof Http.NotFound) {
+            return conn.res.status(404).send({ error: "Resource not found" });
+        } else if (
+            err instanceof Error &&
+            err.message.includes("Database Error")
+        ) {
+            return conn.res
+                .status(500)
+                .send({ error: "Database error occurred." });
+        }
+        return super.onErr(err, conn, next);
+    }
+}
+```
+
+#### Modifying Response Format
+
+Override the formatter.
+
+```typescript
+class MyHandlers extends DefaultHandlers {
+    constructor() {
+        const fmt = (status, body, meta) => {
+            return {
+                statusCode: status,
+                data: body,
+                metadata: meta,
+            };
+        };
+        super(fmt);
+    }
+}
+```
+
+#### Middleware Integration
+
+Use Suvidha's `.use()` method for middleware. This preserves type safety and allows context propagation.
+
+```typescript
+import { Suvidha, DefaultHandlers, Http } from "suvidha";
+import { z } from "zod"; // Import Zod
+
+interface User {
+    id: string;
+    role: string;
+}
+
+declare function authenticate(req: any): Promise<User>;
+
+const suvidha = () => Suvidha.create(new DefaultHandlers());
+
+const auth = () =>
+    suvidha().use(async (conn) => {
+        const user = await authenticate(conn.req).catch((_) => {
+            throw new Http.Unauthorized();
+        });
+        return { user };
+    });
+
+const adminOnly = () =>
+    auth().use(async (conn) => {
+        if (conn.req.context.user.role !== "admin") {
+            throw new Http.Forbidden();
+        }
+        return {};
+    });
+
+const userSchema = z.object({
+    name: z.string(),
+    email: z.string().email(),
+});
+
+const createUser = (user: User) => Http.Created.body(user);
+
+app.post(
+    "/users",
+    auth()
+        .body(userSchema)
+        .handler(async (req) => {
+            const user = req.body;
+            return createUser(user);
+        }),
+);
+
+const pageSchema = z.object({
+    page: z.string().transform(Number),
+    limit: z.string().transform(Number),
+});
+
+app.get(
+    "/users",
+    auth()
+        .query(pageSchema)
+        .handler(async (req) => {
+            const { page, limit } = req.query;
+            return Http.Ok.body({ page, limit });
+        }),
+);
+
+app.listen(3000, () => console.log("Server is listening on port 3000")); // Added a port and listen call
+```
