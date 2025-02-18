@@ -1,55 +1,60 @@
 {
-  "name": "suvidha",
-  "version": "0.1.0",
-  "description": "validation layer for requests in express",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "directories": {
-    "doc": "docs",
-    "example": "examples",
-    "test": "test"
-  },
-  "files": [
-    "/dist"
-  ],
-  "scripts": {
-    "test": "jest --testTimeout=5000",
-    "build": "npx tsc --noEmit"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ishwar00/suvidhajs.git"
-  },
-  "bugs": {
-    "url": "https://github.com/ishwar00/suvidhajs/issues"
-  },
-  "keywords": [
-    "typescript",
-    "schema",
-    "validation",
-    "type",
-    "inference",
-    "express",
-    "validation-layer",
-    "request-validation"
-  ],
-  "author": "ishwar",
-  "license": "ISC",
-  "devDependencies": {
-    "@babel/core": "^7.25.2",
-    "@babel/preset-env": "^7.25.4",
-    "@babel/preset-typescript": "^7.24.7",
-    "@types/jest": "^29.5.12",
-    "@types/supertest": "^6.0.2",
-    "babel-jest": "^29.7.0",
-    "express": "^4.19.2",
-    "jest": "^29.7.0",
-    "supertest": "^7.0.0",
-    "typescript": "^5.5.4",
-    "zod": "^3.23.8"
-  },
-  "dependencies": {
-    "@types/express": "^4.17.21",
-    "http-status-codes": "^2.3.0"
-  }
+    "name": "suvidha",
+    "version": "0.1.0",
+    "description": "Suvidha is a lightweight, type-safe Express.js library that adds powerful validation, middleware context management, and response handling.",
+    "main": "./build/cjs/index.js",
+    "module": "./build/esm/index.js",
+    "types": "./build/types/index.d.ts",
+    "directories": {
+        "doc": "docs"
+    },
+    "files": [
+        "./build"
+    ],
+    "scripts": {
+        "test": "jest --testTimeout=12000",
+        "fmt": "npx prettier --write .",
+        "clean": "rm -rf ./build",
+        "check": "npx tsc --noEmit",
+        "build": "tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json ./tsconfig.types.json"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ishwar00/suvidhajs.git"
+    },
+    "bugs": {
+        "url": "https://github.com/ishwar00/suvidhajs/issues"
+    },
+    "keywords": [
+        "typescript",
+        "schema",
+        "validation",
+        "type",
+        "inference",
+        "express",
+        "zod",
+        "middleware",
+        "context",
+        "validation-layer",
+        "request-validation"
+    ],
+    "author": "ishwar",
+    "license": "ISC",
+    "devDependencies": {
+        "@babel/core": "^7.25.2",
+        "@babel/preset-env": "^7.25.4",
+        "@babel/preset-typescript": "^7.24.7",
+        "@types/jest": "^29.5.12",
+        "@types/supertest": "^6.0.2",
+        "babel-jest": "^29.7.0",
+        "express": "^4.19.2",
+        "jest": "^29.7.0",
+        "supertest": "^7.0.0",
+        "typescript": "^5.5.4",
+        "zod": "^3.23.8"
+    },
+    "dependencies": {
+        "@types/express": "^4.17.21",
+        "zod": "^3.23.8"
+    }
 }
