@@ -13,7 +13,7 @@ export type Conn<
     Query extends Record<string, any> = Record<string, any>,
     Reply extends any = any,
 > = {
-    req: CtxRequest<Ctx, Body, Params, Query, Reply>;
+    req: CtxRequest<Ctx, Params, Reply, Body, Query>;
     res: Response;
 };
 

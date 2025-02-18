@@ -1,6 +1,6 @@
 {
     "name": "suvidha",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "description": "validation layer for requests in express",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -15,7 +15,8 @@
     "scripts": {
         "test": "jest --testTimeout=12000",
         "fmt": "npx prettier --write .",
-        "build": "npx tsc --noEmit"
+        "build": "npx tsc",
+        "check": "npx tsc --noEmit"
     },
     "author": "ishwar",
     "license": "ISC",
