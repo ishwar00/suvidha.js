@@ -1,198 +1,168 @@
-<p align="center">
-  <h1 align="center">Suvidha</h1>
-</p>
+<div align="center">
+  <h1>Suvidha</h1>
+  <p>Validation • Context • Control</p>
+</div>
 
-# Why one more package?
+<div align="center">
+<table>
+<tr>
+<td>
+<h3>Type-Safe Middleware</h3>
+<p>Chain middleware like LEGO blocks, with auto-typed context propagation.</p>
+</td>
+<td>
+<h3>Data Validation</h3>
+<p>Zod-powered type safety for body, params, and queries—without cluttering your routes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<h3>Framework Independence</h3>
+<p>Keep your business logic clean—no Express.js baggage.</p>
+</td>
+<td>
+<h3>Explicit Control</h3>
+<p>Fine-grained control over the request/response lifecycle.</p>
+</td>
+</tr>
+</table>
+</div>
 
-I work with [typescript](https://www.typescriptlang.org/) and [Express.js](https://expressjs.com/) a lot. There were couple of things I wanted,
+Suvidha (सुविधा - Hindi for 'facility') is a lightweight, type-safe Express.js library that adds powerful validation, middleware context management, and streamlined response handling.
 
-- **Type-safe** request handling.
-- Easy response handling.
+- **No Rewrites** - Adopt incrementally in existing Express apps.
+- **TypeScript Native** - Inferred types end "guess what's in `req`" games.
 
-And I was not looking for a solution that will Hack over Express.js like [Nest.js](https://nestjs.com/).
-Something easy to plugin and unplug.
-
-# Hence Suvidha.
-
-Suvidha is a TypeScript library improves Express.js experience by providing:
-
-- Type-safe request handling using [Zod](https://zod.dev/)
-- Easy response handling
-
-![Suvidha's Flow](suvidha_flow.png "Suvidha Flow")
+For full documentation, see the [Suvidha Documentation](https://na-5c045cf1.mintlify.app/introduction).
 
 ## Installation
 
 ```bash
-npm install @waffles-lab/suvidha
+npm install suvidha
 ```
 
-## Okay Show Me the Code
+## Quickstart
 
-1. Type-safe request handling.
+This example demonstrates a protected user creation endpoint with validation, authentication, and authorization.
 
-```typescript
-// examples/pipe/book.example.ts
+### app.ts
 
-// When validation fails, onSchemaErr is called
-const onSchemaErr = (err: ZodError, conn: Connection, next: NextFunction) => {
-    conn.res.status(StatusCodes.BAD_REQUEST).json({
-        status: "error",
-        data: "Data provided does not meet the required format.",
-        meta: {
-            reason: err.flatten(),
-        },
-    });
+```ts
+import express from "express";
+import { Suvidha, DefaultHandlers, Formatter } from "suvidha";
+import { UserSchema } from "./dto";
+import { authenticate, roleCheck } from "./middlewares";
+import { createUserHandler } from "./controller";
+
+const app = express();
+app.use(express.json());
+
+const formatter: Formatter = (status, body, meta) => {
+    const isDev = process.env["NODE_ENV"] === "development";
+    return {
+        statusCode: status,
+        data: body,
+        meta: isDev ? meta : undefined,
+    };
 };
 
-// Create a pipe factory
-const pipe = () => new Pipe(onSchemaErr); // onSchemaErr is optional
-
-const bookSchema = z.object({ name: z.string() });
-const bookId = z.object({ id: z.string() });
+const suvidha = () => Suvidha.create(new DefaultHandlers(formatter));
 
 app.post(
-    "/store/:id/books",
-    // create a middleware to validate the request
-    pipe().body(bookSchema).params(bookId).validate(),
-    // req is typed as Request<{ id: string }, any, { name: string }>
-    (req, res) => {
-        const { name } = req.body; // Type of body: { name: string }
-        const { id } = req.params; // Type of params: { id: string }
-        // do some stuff...
-        res.status(200).json({
-            data: {
-                message: "book created successfully",
-                book: {
-                    name,
-                    id,
-                },
-            },
-            status: "success",
-            meta: {},
-        });
-    },
-);
-```
-
-2. Type-safe request handling and easy response handling.
-
-```typescript
-// examples/suvidha/book.example.ts
-
-// Create a Suvidha factory
-const suvidha = () => Suvidha.create(DefaultHandlers.create());
-
-const bookSchema = z.object({ name: z.string() });
-const bookId = z.object({ id: z.string() });
-
-app.post(
-    "/store/:id/books",
-    // validation is similar to pipe
+    "/users",
     suvidha()
-        .body(bookSchema)
-        .params(bookId)
-        // req is typed as Request<{ id: string }, any, { name: string }>
-        .prayog((req, _) => {
-            const { name } = req.body; // Type of body: { name: string }
-            const { id } = req.params; // Type of params: { id: string }
-            // do some stuff...
-            // return the body, rest will be handled by default handlers
-            return {
-                message: "book created successfully",
-                book: {
-                    name,
-                    id,
-                },
-            };
+        .use(authenticate)
+        .use(roleCheck)
+        .body(UserSchema)
+        .handler(async (req) => {
+            const newUser = req.body; // Type: z.infer<typeof UserSchema>
+            const { role } = req.context.user; // Type: string
+            return createUserHandler(newUser, role);
         }),
 );
+
+app.listen(3000);
 ```
 
-Both of the above examples produce the same output:
+### controller.ts
+
+```ts
+import { Http } from "suvidha";
+import { UserDTO } from "./dto";
+
+declare function createUser(
+    user: UserDTO,
+    role: string,
+): Promise<{ id: string }>;
+
+export async function createUserHandler(user: UserDTO, role: string) {
+    try {
+        const result = await createUser(user, role);
+        return Http.Created.body(result);
+    } catch (err: any) {
+        if (err.code === "DUPLICATE_EMAIL") {
+            throw Http.Conflict.body({ message: "Email already exists" });
+        }
+        throw err; // Propagate to Suvidha's onErr handler
+    }
+}
+```
+
+### middlewares.ts
+
+```ts
+import { Conn, Http } from "suvidha";
+
+interface User {
+    role: string;
+    // ... other user properties
+}
+
+const verify = async (token: string): Promise<User> => {
+    // ... your authentication logic
+    return { role: "admin" }; // Example
+};
+
+export const authenticate = async ({ req }: Conn) => {
+    const token = req.headers["authorization"];
+    if (!token) {
+        throw new Http.Unauthorized();
+    }
+    const user = await verify(token).catch((_) => {
+        throw new Http.Unauthorized();
+    });
+    return { user };
+};
+
+export const roleCheck = (conn: Conn<{ user: User }>) => {
+    if (conn.req.context.user.role !== "admin") {
+        throw Http.Forbidden.body({ message: "Admin access required" });
+    }
+    return {};
+};
+```
+
+### dto.ts
+
+```ts
+import { z } from "zod";
+
+export const UserSchema = z.object({
+    username: z.string().min(3),
+    email: z.string().email(),
+    age: z.number().min(13),
+});
+
+export type UserDTO = z.infer<typeof UserSchema>;
+```
+
+**Sample Response (201 Created)**
 
 ```json
 {
-    "status": "success",
+    "statusCode": 201,
     "data": {
-        "message": "book created successfully",
-        "book": {
-            "name": "foo",
-            "id": "bar"
-        }
-    },
-    "meta": {}
+        "id": "67adc39ea1ff4e9d60273236"
+    }
 }
 ```
-
-## Glossary
-
-- **Connection**: The connection object is an object that contains the request and response objects.
-
-    ```typescript
-    // simplified version
-    type Connection = {
-        req: Request;
-        res: Response;
-    };
-    ```
-
-- **Handlers**: The handlers object is an object that contains the `onErr()`, `onSchemaErr()`, `onComplete()`, and `onUncaughtData()` functions.
-- **Pipe**: The pipe is a middleware that validates the request, and calls `next()` if the validation succeeds.
-  Otherwise, it calls `onSchemaErr()` which is an optional callback function that you can define.
-- **Suvidha**: It's Hindi term for **Facility**.
-- **Prayog**: It's Hindi term for **Use**.
-
-## Let's talk about Pipe a bit
-
-If you just want to validate the request, you can use the pipe.
-
-**Pipe** is a middleware that validates the request, and calls `next()` if the validation succeeds.
-Otherwise, it calls `onSchemaErr()` which is an optional callback function that you can define.
-If you don't define it, validation errors will be passed to the `next()` as an argument, `next(err)`.
-
-### Usage and API
-
-**Pipe** is a class that you can create an instance of.
-It takes an optional argument to handle the validation errors.
-
-> NOTE: Generics are omitted for brevity.
-
-```typescript
-type OnSchemaErr = (
-    err: ZodError,
-    conn: Connection,
-    next: NextFunction,
-) => void;
-
-class Pipe {
-    constructor(onSchemaErr?: OnSchemaErr);
-}
-```
-
-First of all, you need to create a pipe factory and error handler.
-
-```typescript
-import { Pipe } from "@waffles-lab/suvidha";
-
-const onSchemaErr = (err: ZodError, conn: Connection, next: NextFunction) => {
-    conn.res.status(StatusCodes.BAD_REQUEST).json({
-        status: "error",
-        data: "Data provided does not meet the required format.",
-        meta: {},
-    });
-};
-
-const pipe = () => new Pipe(onSchemaErr);
-```
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first
-to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
