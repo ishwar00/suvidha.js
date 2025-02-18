@@ -1,0 +1,185 @@
+---
+title: "Introduction"
+description: "A Structured Approach to Express APIs"
+icon: "scroll"
+---
+
+<div className="text-center mb-16">
+    <h1 className="text-4xl font-bold mb-4">Suvidha</h1>
+    <p className="text-xl text-gray-600 dark:text-gray-300">
+        Validation • Context • Control
+    </p>
+</div>
+
+<CardGroup cols={2}>
+    <Card title="Type-Safe Middleware" icon="shield-check">
+        Chain middleware like LEGO blocks, with auto-typed context propagation.
+    </Card>
+    <Card title="Data Validation" icon="certificate">
+        Zod-powered type safety for body, params, and queries—without cluttering
+        your routes.
+    </Card>
+    <Card title="Framework Independence" icon="code-branch">
+        Keep your business logic clean no Express.js baggage.
+    </Card>
+    <Card title="Explicit Control" icon="sliders">
+        Fine-grained control over request/response lifecycle
+    </Card>
+</CardGroup>
+
+<Tooltip tip="सुविधा - Hindi for 'facility'">Suvidha</Tooltip> is a lightweight,
+type-safe Express.js library that adds powerful validation, middleware context
+management, and response handling.
+
+- **No Rewrites** - Adopt incrementally in existing Express apps
+- **TypeScript Native** - Inferred types end "**guess what's in req**" games
+
+## Installation
+
+Library is available on npm registry.
+
+```bash
+npm install suvidha
+```
+
+## Quickstart
+
+<Tabs>
+
+<Tab title="app.ts">
+
+```ts
+import express from "express";
+import { Suvidha, DefaultHandlers, Formatter } from "suvidha";
+import { UserSchema } from "./dto";
+import { authenticate, roleCheck } from "./middlewares";
+import { createUserHandler } from "./controller";
+
+const app = express();
+app.use(express.json());
+
+// Formatter for response body
+const formatter: Formatter = (status, body, meta) => {
+    const isDev = process.env["NODE_ENV"] === "development";
+    // Example response format
+    return {
+        statusCode: status,
+        data: body,
+        meta: isDev ? meta : undefined,
+    };
+};
+
+// Configure Suvidha with default handlers
+const suvidha = () => Suvidha.create(new DefaultHandlers(formatter));
+
+// Protected user creation endpoint
+app.post(
+    "/users",
+    suvidha()
+        .use(authenticate) // authenticate
+        .use(roleCheck) // check permissions
+        .body(UserSchema) // Validate request body
+        .handler(async (req) => {
+            // All validation/security passed
+            const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
+            const { role } = req.context.user; // type of role: string
+            return createUserHandler(newUser, role); // Execute business logic
+        }),
+);
+
+app.listen(3000);
+```
+
+</Tab>
+
+<Tab title="controller.ts">
+
+```ts
+import { Http }  "suvidha";
+import { UserDTO } from "./dto";
+
+declare function createUser(
+    user: UserDTO,
+    role: string,
+): Promise<{ id: string }>;
+
+// Core business logic handler
+export async function createUserHandler(user: UserDTO, role: string) {
+    try {
+        const result = await createUser(user, role);
+        return Http.Created.body(result);
+    } catch (err: any) {
+        if (err.code === "DUPLICATE_EMAIL") {
+            throw Http.Conflict.body({
+                message: "Email already exists",
+            });
+        }
+        throw err; // Propagate to Suvidha's onErr handler
+    }
+}
+```
+
+</Tab>
+
+<Tab title="middlewares.ts">
+
+```ts
+import { Conn, Http } from "suvidha";
+
+// Mock authentication service
+const verify = async (token: string) => {
+    // Replace with real auth logic
+    return { role: "admin" };
+};
+
+// Auth middleware: Adds user to context
+export const authenticate = async ({ req }: Conn) => {
+    const token = req.headers["authorization"]!;
+    const user = await verify(token).catch((_) => {
+        throw new Http.Unauthorized(); // Convert auth failures to 401
+    });
+    return { user }; // add `{ user }` to context
+};
+
+// Role guard: Requires admin privileges
+// This middleware expects { user: { role: string } } in context
+export const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
+    if (conn.req.context.user.role !== "admin") {
+        throw Http.Forbidden.body({ message: "Admin access required" });
+    }
+    return {}; // Nothing to add to context
+};
+```
+
+</Tab>
+
+<Tab title="dto.ts">
+
+```ts
+// data transfer objects
+import { z } from "zod";
+
+// User validation schema
+export const UserSchema = z.object({
+    username: z.string().min(3),
+    email: z.string().email(),
+    age: z.number().min(13),
+});
+
+export type UserDTO = z.infer<typeof UserSchema>;
+```
+
+</Tab>
+
+</Tabs>
+
+**sample response**
+
+```json
+{
+    "statusCode": 201,
+    "data": {
+        "id": "67adc39ea1ff4e9d60273236"
+    }
+}
+```

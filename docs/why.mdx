@@ -1,0 +1,352 @@
+---
+title: "Why Suvidha?"
+description: "Building type-safe Express APIs without boilerplate"
+icon: "puzzle-piece"
+---
+
+Suvidha is designed for type safety and better developer experience with Express.js.
+
+Let's take a look at the typical flow of a request and response handling.
+
+<Steps>
+    <Step title="Authentication" icon="shield-check">
+        Validates user identity by checking the provided JWT token, API key, or
+        session cookie before proceeding.
+    </Step>
+
+    <Step title="Authorization" icon="user-check">
+        Verifies if the authenticated user has the required permissions to
+        access the requested resource.
+    </Step>
+
+    <Step title="Validation" icon="circle-check">
+        Ensures all request data is properly formatted and meets the required
+        validation rules.
+    </Step>
+
+    <Step title="Resource" icon="database">
+        Executes the main business logic to handle the request and prepare the
+        appropriate response.
+    </Step>
+
+</Steps>
+
+Below is an **usual** example implementation of it in express.js.
+
+<Tabs>
+
+<Tab title="routes">
+
+```ts
+app.post(
+    "/books",
+    authenticate,
+    authorize,
+    (req) => validateBody(req, BookSchema),
+    async function (req, res) {
+        // Instead of `try-catch` usually we use "asyncHandler()"
+        try {
+            await handler(req, res);
+        } catch (err) {
+            res.status(500).json({
+                error: "Internal Server Error",
+            });
+        }
+    },
+);
+```
+
+</Tab>
+
+<Tab title="middlewares">
+
+```ts {9, 17}
+type User = { role: string, name: string };
+
+declare async function verify(token: string): Promise<User>;
+
+async function authenticate(req: Request, res: Response, next: NextFunction) {
+    const token = req.headers['Authorization']!;
+    try {
+        // alternatively, extend Express' Request interface globally
+        (req as any).user = await verify(token);
+        next();
+    } catch (err) {
+        return void res.status(401).send('Unauthorized');
+    }
+}
+
+async function authorize(req: Request, res: Response, next: NextFunction) {
+    const { role } = (req as any).user as User;
+    if (role !== 'admin') {
+        return void res.status(403).send('Forbidden');
+    }
+    next();
+}
+
+function validateBody(req: Request, zodSchema: ZodType<any>) {
+  try {
+    req.body = zodSchema.parse(req.body);
+    next();
+  } catch (err) {
+    return void res.status(400).send('Bad Request');
+  }
+}
+```
+
+</Tab>
+
+<Tab title="handlers">
+
+```ts {2, 3}
+async function handler(req: Request, res: Response) {
+    const book = req.body as BookDto;
+    const user = (req as any).user as User; // from auth middleware
+    // create book logic
+    res.status(200).json({
+        data: {
+            id: '67619c28758da37270b925a8'
+            createdBy: user.name
+        }
+    })
+}
+
+```
+
+</Tab>
+
+<Tab title="dto">
+
+```ts
+// Data transfer objects
+import { z } from "zod";
+
+// User validation schema
+export const BookSchema = z.object({
+    name: z.string().min(3),
+    author: z.string().min(3),
+});
+
+export type BookDto = z.infer<typeof BookSchema>;
+```
+
+</Tab>
+
+</Tabs>
+
+Popular solutions:
+
+- [`asyncHandler()`](https://www.google.com/search?q=async+handler) to avoid `try-catch` boilerplate
+- [extend](https://www.google.com/search?q=how+to+add+user+info+to+express+request) Express' Request interface globally to add `user`
+
+It's patchwork to add `user` property to `Request` interface globally.
+Types are not inferred by typescript, middlewares and request handlers act independently,
+and on a leap of faith that everyone is doing their job right.
+
+Suvidha is a wrapper around your request handler, that addresses all these type-safety issues.
+
+Re-writing the above example using Suvidha:
+
+<Tabs>
+
+<Tab title="routes">
+
+```ts
+// Order authenticate -> authorize is enforced at compile-time
+app.post(
+    "/books",
+    suvidha()
+        .body(BookSchema)
+        .use(authenticate)
+        .use(authorize)
+        .handler(async (req, _res) => {
+            const { user } = req.context; // type of user: { role: string, name: string }
+            const book = req.body; // type of book: { name: string, author: string }
+            return handler(book, user);
+        }),
+);
+```
+
+</Tab>
+
+<Tab title="middlewares">
+
+```ts {10, 14}
+type User = { role: string, name: string };
+
+declare async function verify(token: string): Promise<User>;
+
+async function authenticate({ req }: Conn) {
+    const token = req.headers['Authorization']!;
+    const user = await verify(token).catch((_) => {
+        throw new Http.Unauthorized(); // Convert auth failures to 401
+    });
+    return { user }; // add `User` to context
+}
+
+async function authorize({ req }: Conn<{ user: User }>) {
+    const { role } = req.context.user;
+    if (role !== "admin") {
+        throw new Http.Forbidden();
+    }
+    return {}; // nothing to add to context
+}
+
+// No need for validators, they are handled by Suvidha
+```
+
+</Tab>
+
+<Tab title="handlers">
+
+```ts
+// loosely coupled business logic
+async function handler(book: BookDto, user: User) {
+  // create book logic
+  return {
+    id: '67619c28758da37270b925a8'
+    createdBy: user.name
+  }
+}
+```
+
+</Tab>
+
+<Tab title="dto">
+
+```ts
+// Data transfer objects
+import { z } from "zod";
+
+// User validation schema
+export const BookSchema = z.object({
+    name: z.string().min(3),
+    author: z.string().min(3),
+});
+
+export type BookDto = z.infer<typeof BookSchema>;
+```
+
+</Tab>
+
+</Tabs>
+If you noticed, we never used `_res: Response` anywhere to send response, 
+because that's handled by `Handlers` for us. If you want to send a response manually,
+you can still do `res.send()` and it will work fine.
+
+To understand how `Suvidha` facilitates this, let's look at the flow.
+
+#### Flow
+
+Lines are highlighted wherever the `Handlers` are called incluing request handler.
+
+<Tabs>
+
+<Tab title="ascii">
+
+```ascii [expandable] {19, 34, 39, 41, 52, 54}
+Start Request]
+    |
+    v
+[Initialize Context]
+    |
+    v
+[Validation/Middleware Loop (Ordered)]
+    |
+    +-- For each item in order (Validation or Middleware):
+    |    |
+    |    v
+    |    [Is it Validation?]
+    |        |
+    |        +-- Yes: [Parse Validation (body/query/params)]
+    |        |        |
+    |        |        +-- Error?
+    |        |            |
+    |        |            v
+    |        |            [ZodError] --> onSchemaErr(error, conn)
+    |        |                        |
+    |        |                        +-- Headers Sent? --> Return
+    |        |                        |
+    |        |                        +-- Not Sent --> Log & Re-throw Err
+    |        |
+    |        +-- No: [Execute Middleware]
+    |                 |
+    |                 v
+    |                 [Middleware Function] --> Update Context
+    |                 |
+    |                 +-- Headers Sent? --> Return
+    |
+    |
+    v
+[Execute Handler (User-provided)] --> Output
+    |
+    v
+[Check Headers Sent]
+    |
+    +-- Yes --> onPostResponse(output, conn, next)
+    |
+    +-- No --> onComplete(output, conn, next)
+    |
+    v
+[Error Occurs (Anywhere above)]
+    |
+    v
+[Catch Block]
+    |
+    v
+[Check Headers Sent]
+    |
+    +-- Yes --> onPostResponse(error, conn, next)
+    |
+    +-- No --> onErr(error, conn, next)
+```
+
+</Tab>
+
+<Tab title="code version">
+
+```ts [expandable] {8, 14, 23, 27, 31, 34, 36}
+this.initializeContext<Reply>(req); // with `{}`
+const conn = { req, res };
+try {
+    // execute middlewares in the declaration order
+    for (const ref of this.order) {
+        if (typeof ref === "string") {
+            // Data validation middleware
+            await this.parse(conn, ref); // calls onSchemaErr on error
+        } else {
+            // 'use' middleware
+            const useFn = this.useHandlers[ref]!;
+            req.context = {
+                ...req.context,
+                ...(await useFn(conn)),
+            };
+        }
+
+        /* If any of the middleware completes the response */
+        if (res.headersSent) return;
+    }
+
+    // run the request handler
+    const output = await handler(req, res, next);
+
+    if (res.headersSent) {
+        if (output !== undefined) {
+            await this.handlers.onPostResponse(output, conn, next);
+        }
+        return;
+    }
+    await this.handlers.onComplete(output, conn, next);
+} catch (err: unknown) {
+    if (res.headersSent) {
+        return await this.handlers.onPostResponse(err, conn, next);
+    }
+    return await this.handlers.onErr(err, conn, next);
+}
+```
+
+</Tab>
+</Tabs>
+
+That's pretty much what `Suvidha` is. It just facilitates the flow by adding a layer of abstraction and type-safety.
+`Handlers` have the control over how you process the request and response.

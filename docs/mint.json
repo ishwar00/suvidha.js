@@ -1,0 +1,39 @@
+{
+    "$schema": "https://mintlify.com/schema.json",
+    "name": "Suvidha",
+    "favicon": "/favicon.svg",
+    "colors": {
+        "primary": "#0D9373",
+        "light": "#07C983",
+        "dark": "#0D9373",
+        "anchors": {
+            "from": "#0D9373",
+            "to": "#07C983"
+        }
+    },
+    "codeBlock": {
+        "mode": "auto"
+    },
+    "anchors": [],
+    "navigation": [
+        {
+            "group": "Get Started",
+            "pages": ["introduction", "why"]
+        },
+        {
+            "group": "Usage",
+            "pages": ["usage/api", "usage/usage", "usage/limitation"]
+        },
+        {
+            "group": "Reference",
+            "pages": [
+                "reference/handlers",
+                "reference/http",
+                "reference/defaultHandlers"
+            ]
+        }
+    ],
+    "footerSocials": {
+        "github": "https://github.com/ishwar00/suvidha.js"
+    }
+}

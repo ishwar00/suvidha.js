@@ -1,0 +1,222 @@
+---
+title: "Http Classes"
+icon: "file-code"
+---
+
+Suvidha's `Http` classes simplify responses. Default handlers support them _and_ plain `Protocol` objects. If you write your own handlers, you need to support these if you want to use them.
+
+### The `Protocol` Type
+
+Response structure.
+
+```typescript
+/**
+ * @typedef {object} Protocol
+ * @property {any} body - The response body.  This can be a string, an object, or any other data you want to send in the response.
+ * @property {number} status - The HTTP status code (e.g. 200).
+ * @property {Headers} [headers] - Optional response headers.  A record where keys are header names and values are header values.
+ * @property {Meta} [meta] - Optional metadata associated with the response.
+ */
+export interface Protocol {
+    body: any;
+    status: number;
+    headers?: Headers;
+    meta?: Meta;
+}
+```
+
+### Using the `Http` Classes
+
+```typescript
+import { Http } from "suvidha";
+
+// In your request handler (using Suvidha's default handlers):
+return Http.Ok.body({ message: "Success!" })
+    .header("X-Custom-Header", "some-value")
+    .meta({ timestamp: Date.now() });
+
+// Or for errors:
+throw new Http.BadRequest.body({ error: "Invalid request" });
+
+// Or using the default message:
+throw new Http.Unauthorized(); // Sends a 401 with the default "Unauthorized" message.
+```
+
+### The `Http.End` Class (Base Class)
+
+This is the foundation for all the other Http classes.
+
+```typescript [expandable]
+/**
+ * The base class for all HTTP response classes.
+ */
+export class End {
+    /**
+     * @param {Protocol} protocol - The protocol object containing the response details.
+     */
+    constructor(protected readonly protocol: Protocol) {
+        this.protocol.headers = this.protocol.headers ?? {};
+        this.protocol.meta = this.protocol.meta ?? {};
+    }
+
+    /**
+     * Sets the metadata for the response.
+     * @param {Meta} meta - The metadata object.
+     * @returns {Http.End} - The current Http.End instance for chaining.
+     */
+    meta(meta: Meta): Http.End {
+        this.protocol.meta = meta;
+        return this;
+    }
+
+    /**
+     * Sets the headers for the response.
+     * @param {Headers} headers - The headers object.
+     * @returns {Http.End} - The current Http.End instance for chaining.
+     */
+    headers(headers: Headers): Http.End {
+        this.protocol.headers = headers;
+        return this;
+    }
+
+    /**
+     * Sets a single header for the response.
+     * @param {string} key - The header key.
+     * @param {string} value - The header value.
+     * @returns {Http.End} - The current Http.End instance for chaining.
+     */
+    header(key: string, value: string): Http.End {
+        this.protocol.headers![key] = value;
+        return this;
+    }
+
+    /**
+     * Gets the HTTP status code.
+     * @returns {number} - The HTTP status code.
+     */
+    getStatus(): number {
+        return this.protocol.status;
+    }
+    /**
+     * Gets reference to the response body.
+     * @returns {any} - The response body.
+     */
+    getBody(): any {
+        return this.protocol.body;
+    }
+
+    /**
+     * Gets the response metadata.
+     * @returns {Meta} - The metadata object.
+     */
+    getMeta(): Meta {
+        return this.protocol.meta!;
+    }
+
+    /**
+     * Gets the response headers.
+     * @returns {Headers} - The headers object.
+     */
+    getHeaders(): Headers {
+        return this.protocol.headers!;
+    }
+}
+```
+
+### HTTP Response Classes
+
+2xx (Success) classes require a body. Other classes (1xx, 3xx, 4xx, 5xx) have default messages.
+
+#### `Http.Ok` (200 OK)
+
+- **Description:** Represents a successful 200 OK response.
+- **Usage:** `Http.Ok.body(body)`
+- **Example:** `return Http.Ok.body({ data: result });`
+
+```typescript [expandable]
+/**
+ * Represents a 200 OK response.
+ */
+export class Ok extends End {
+    /**
+     * @param {any} body - The response body.
+     */
+    constructor(body: Protocol["body"]) {
+        super({ body, status: StatusCodes.OK });
+    }
+
+    /**
+     * Creates an `Http.Ok` response with the given body.
+     * @param {any} body - The response body.
+     * @returns {Http.Ok} - A new `Http.Ok` instance.
+     */
+    static body(body: Protocol["body"]): Ok {
+        return new Ok(body);
+    }
+}
+```
+
+#### `Http.BadRequest` (400 Bad Request)
+
+- **Description:** Represents a 400 Bad Request response.
+- **Usage:** `throw new Http.BadRequest.body(body)` or `throw new Http.BadRequest()` (for default message).
+- **Example:** `throw new Http.BadRequest.body({ error: "Invalid input" });` or `throw new Http.BadRequest();` (sends "Bad Request")
+
+```typescript [expandable]
+/**
+ * Represents a 400 Bad Request response.  Has a default body message.
+ */
+export class BadRequest extends End {
+    /**
+     * @param {any} [body="Bad Request"] - The response body (defaults to "Bad Request").
+     */
+    constructor(body: Protocol["body"] = "Bad Request") {
+        super({ body, status: StatusCodes.BAD_REQUEST });
+    }
+
+    /**
+     * Creates an `Http.BadRequest` response with the given body.
+     * @param {any} body - The response body.
+     * @returns {Http.BadRequest} - A new `Http.BadRequest` instance.
+     */
+    static body(body: Protocol["body"]): BadRequest {
+        return new BadRequest(body);
+    }
+}
+```
+
+other class follow the same pattern.
+
+### Error Handling with `Http` Classes
+
+You can throw instances of the appropriate `Http` error class.
+
+```typescript
+// Example:
+if (/* some error condition */) {
+    throw new Http.BadRequest.body({ error: "Missing required parameter" }); // Custom message
+}
+
+if (/* another error condition */) {
+    throw new Http.InternalServerError(); // Default "Internal Server Error" message
+}
+```
+
+### Simple Alternative
+
+Return plain `Protocol` objects if preferred:
+
+```typescript
+return {
+    body: data,
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+    meta: { timestamp: Date.now() },
+};
+```
+
+<Warning>
+    {" "}
+    Don't throw plain `Protocol` objects, they are not processed by
+    `DefaultHandlers`'s `onErr` handler. Use `Http` classes instead.{" "}
+</Warning>

@@ -1,2 +1,7 @@
 node_modules
 dist
+.DS_store
+Buffer.md
+*/**/buff
+prompt.md
+./build

@@ -1,0 +1,296 @@
+---
+title: "Handlers"
+icon: "gear"
+---
+
+Suvidha handlers are essential for customizing request processing.
+They handle validation, responses, and more.
+
+All handlers receive a `Conn` object, which contains.
+
+- `req`: An extended Express `Request` object, which includes the `context`
+  property for accessing request-specific data added by middlewares.
+- `res`: The standard Express `Response` object.
+
+```ts
+/**
+ * CtxRequest adds context to the Request object
+ * CtxRequest<Context, Params, ResBody, ReqBody, ReqQuery>,
+ * Request<            Params, ResBody, ReqBody, ReqQuery>
+ */
+export type Conn<T extends Context, ...> = {
+    req: CtxRequest<T, ...>;
+    res: Response;
+};
+```
+
+```ts
+class Suvidha {
+    constructor(handlers: Handlers);
+}
+```
+
+`Suvidha` constructor takes any object that implements `Handlers` interface, which is defined as follows:
+
+```ts
+export interface Handlers {
+    onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
+    onSchemaErr(
+        err: ZodError,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void;
+    onComplete(
+        output: unknown,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void;
+    onPostResponse(
+        outputOrErr: unknown,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void;
+}
+```
+
+## Understanding the Handlers
+
+Here's a breakdown of each handler:
+
+<AccordionGroup>
+<Accordion title="onSchemaErr" icon="code">
+
+```ts
+interface Handlers {
+    onSchemaErr(
+        err: ZodError,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void;
+    // ... other handlers
+}
+```
+
+**Responsibilities:**
+
+- Handle Zod schema validation failures gracefully.
+- Typically send an appropriate error response
+- Can call `next(err)` to offload error handling to Express's default error handler or other middleware.
+
+**Trigger Conditions:**
+
+- Called when a Zod schema validation fails (e.g., request body, query parameters, or path parameters do not match the defined schema).
+
+**Arguments:**
+
+- `err`: The `ZodError` object containing details about the validation failure.
+- `conn`: The `Conn` object containing the request (`conn.req`) and response (`conn.res`) objects.
+- `next`: The Express `next` function.
+
+Example implementation:
+
+```ts
+class CustomHandlers implements Handlers {
+    onSchemaErr(err: ZodError, conn: Conn, next: NextFunction) {
+        console.error("Schema validation failed:", err.errors); // Log the errors
+        conn.res.status(400).json({ error: "Invalid request data" }); // Send a 400 response
+    }
+
+    // ... other handlers
+}
+```
+
+</Accordion>
+
+<Accordion title="onErr" icon="code">
+
+```ts
+interface Handlers {
+    onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
+    // ... other handlers
+}
+```
+
+**Responsibilities:**
+
+- Handle errors that occur _before_ a response has been sent.
+- Can log the error, send an error response, or pass the error to Express's default error handler using `next(err)`.
+
+**Trigger Conditions:**
+
+- Called when an error is thrown during middleware or request handler execution _before_ any part of the response has been sent (headers or body).
+
+**Arguments:**
+
+- `err`: The error object. This can be of any type, depending on what threw the error.
+- `conn`: The `Conn` object containing the request and response objects.
+- `next`: The Express `next` function.
+
+Example implementation:
+
+```ts
+class CustomHandlers implements Handlers {
+    onErr(err: unknown, conn: Conn, next: NextFunction) {
+        console.error("An error occurred:", err);
+        conn.res.status(500).json({ error: "Internal server error" }); // Or call next(err)
+    }
+
+    // ... other handlers
+}
+```
+
+</Accordion>
+
+<Accordion title="onComplete" icon="code">
+
+```ts
+interface Handlers {
+    onComplete(
+        output: unknown,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void;
+    // ... other handlers
+}
+```
+
+**Responsibilities:**
+
+- Handle the successful completion of the request handler function when a response has _not_ already been sent.
+- Typically send the successful response based on the `output` from the request handler.
+
+**Trigger Conditions:**
+
+- Called when the request handler function executes successfully _and_ no part of the response (headers or body) has been sent yet.
+
+**Arguments:**
+
+- `output`: The value returned by the request handler function. This can be of any type.
+- `conn`: The `Conn` object containing the request and response objects.
+- `next`: The Express `next` function. While available, it's typically not needed in `onComplete`.
+
+Example implementation:
+
+```ts
+class CustomHandlers implements Handlers {
+    onComplete(output: unknown, conn: Conn, next: NextFunction) {
+        conn.res.json(output); // Send the output as JSON
+    }
+
+    // ... other handlers
+}
+```
+
+</Accordion>
+
+<Accordion title="onPostResponse" icon="code">
+
+```ts
+interface Handlers {
+    onPostResponse(
+        outputOrErr: unknown,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void;
+    // ... other handlers
+}
+```
+
+**Responsibilities:**
+
+- Handle anything that happens _after_ a response has been initiated (headers sent). This includes both errors and returned values.
+- Log errors that occur after the response has begun.
+- Handle the (usually unintentional) scenario where the request handler returns a value after sending a response.
+
+**Trigger Conditions:**
+
+<Note>
+    `res.send()`, `res.json()` any method that sends the headers or body is
+    considered equivalent and considered initiating the response.
+</Note>
+
+- Called when something happens _after_ a response has started (headers sent).  
+  This can be:
+    - Errors thrown by middleware _after_ using `conn.res.send()`.
+    - Errors thrown by the request handler _after_ using `res.send()`.
+    - The request handler returning a value _after_ using `res.send()`. (This is primarily for bug detection).
+
+**Arguments:**
+
+- `outputOrErr`: Either the error object (if an error occurred) or the returned value from the request handler (if the request handler returned a value after sending the response). The type will be `unknown`.
+- `conn`: The `Conn` object containing the request and response objects.
+- `next`: The Express `next` function. While available, it's typically not needed in `onPostResponse`.
+
+It's important to note:
+
+- If the request handler throws an error _before_ sending a response, `onErr` is called, _not_ `onPostResponse`.
+- If middleware sends a response, the request handler is not executed. Any errors thrown by the middleware _after_ sending the response are caught by `onPostResponse`.
+
+Example implementation:
+
+```ts
+class CustomHandlers implements Handlers {
+    onPostResponse(outputOrErr: unknown, conn: Conn, next: NextFunction) {
+        if (outputOrErr instanceof Error) {
+            // Check if it's an error
+            console.error("Error after response:", outputOrErr);
+            // Log the error or perform cleanup tasks.
+        } else {
+            console.warn(
+                "Request handler returned value after sending response:",
+                outputOrErr,
+            );
+            // This is usually a bug. Log it and possibly take corrective action.
+        }
+    }
+    // ... other handlers
+}
+```
+
+</Accordion>
+</AccordionGroup>
+
+**Exmaple Implementation**
+
+```ts
+class CustomHandlers implements Handlers {
+    onSchemaErr(err: ZodError, conn: Conn, next: NextFunction) {
+        console.error("Schema validation failed:", err.errors); // Log the errors
+        conn.res.status(400).json({ error: "Invalid request data" }); // Send a 400 response
+    }
+
+    onErr(err: unknown, conn: Conn, next: NextFunction) {
+        console.error("An error occurred:", err);
+        conn.res.status(500).json({ error: "Internal server error" }); // Or call next(err)
+    }
+
+    onComplete(output: unknown, conn: Conn, next: NextFunction) {
+        conn.res.json(output); // Send the output as JSON
+    }
+
+    onPostResponse(outputOrErr: unknown, conn: Conn, next: NextFunction) {
+        if (outputOrErr instanceof Error) {
+            // Check if it's an error
+            console.error("Error after response:", outputOrErr);
+            // You might not be able to send a *new* response here.
+            // Log the error or perform cleanup tasks.
+        } else {
+            console.warn(
+                "Request handler returned value after sending response:",
+                outputOrErr,
+            );
+            // This is usually a bug. Log it and possibly take corrective action.
+        }
+    }
+}
+
+// creating a suvidha instance with custom handlers
+const suvidha = () => new Suvidha(new CustomHandlers());
+
+app.get(
+    "/reports",
+    suvidha().handler((req) => {
+        // Business logic
+    }),
+);
+```
