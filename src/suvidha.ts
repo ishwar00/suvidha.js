@@ -6,10 +6,10 @@ import { _Readonly, Merge } from "./utils.type";
 
 export interface CtxRequest<
     C extends Context,
-    R extends any,
     B extends any = any,
     P extends Record<string, any> = Record<string, any>,
     Q extends core.Query = core.Query,
+    R extends any = any,
 > extends Request<P, R, B, Q> {
     context: C;
 }
@@ -110,24 +110,24 @@ export class Suvidha<
         req: any,
     ): asserts req is CtxRequest<
         _Readonly<C>,
-        R,
         _Readonly<B>,
         _Readonly<P>,
-        _Readonly<Q>
+        _Readonly<Q>,
+        R
     > {
-        (req as CtxRequest<{}, R, B, P, Q>).context = {};
+        (req as CtxRequest<{}, B, P, Q, R>).context = {};
     }
 
     handler<Reply>(
         handler: (
             req: CtxRequest<
                 _Readonly<C>,
-                Reply,
                 _Readonly<B>,
                 _Readonly<P>,
-                _Readonly<Q>
+                _Readonly<Q>,
+                Reply
             >,
-            res: Response,
+            res: Response<Reply>,
             next: core.NextFunction,
         ) => Reply,
     ): core.RequestHandler<P, Reply, B, Q> {
