@@ -1,7 +1,7 @@
 {
     "name": "suvidha",
     "version": "0.2.0",
-    "description": "validation layer for requests in express",
+    "description": "Suvidha is a lightweight, type-safe Express.js library that adds powerful validation, middleware context management, and response handling.",
     "main": "./build/cjs/index.js",
     "module": "./build/esm/index.js",
     "types": "./build/types/index.d.ts",
@@ -20,6 +20,26 @@
         "build": "tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json ./tsconfig.types.json"
     },
     "author": "ishwar gowda",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ishwar00/suvidhajs.git"
+    },
+    "bugs": {
+        "url": "https://github.com/ishwar00/suvidhajs/issues"
+    },
+    "keywords": [
+        "typescript",
+        "schema",
+        "validation",
+        "type",
+        "inference",
+        "express",
+        "zod",
+        "middleware",
+        "context",
+        "validation-layer",
+        "request-validation"
+    ],
     "license": "ISC",
     "devDependencies": {
         "@babel/core": "^7.25.2",
