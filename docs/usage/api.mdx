@@ -421,38 +421,33 @@ app.post(
 
 If you have common middlewares accross multiple routes, you can create a `Suvidha` instance and reuse it.
 
-```ts {8, 25, 34}
+```ts {8, 17, 29, 39}
 import { Suvidha, DefaultHandlers, Http } from "suvidha";
 
 declare function authenticate(req: any): Promise<{ role: string }>;
 
 const suvidha = () => Suvidha.create(new DefaultHandlers());
 
+// instance with middlewares for authentication
+const auth = () =>
+    suvidha().use(async (conn) => {
+        const user = await authenticate(conn.req).catch((_) => {
+            throw new Http.Unauthorized();
+        });
+        return { user };
+    });
+
 // instance with middlewares for admin authorization
 const adminAuth = () =>
-    suvidha()
-        .use(async (conn) => {
-            const user = await authenticate(conn.req).catch((_) => {
-                throw new Http.Unauthorized();
-            });
-            return { user };
-        })
-        .use(async (conn) => {
-            if (conn.req.context.user.role !== "admin") {
-                throw new Http.Forbidden();
-            }
-            return {};
-        });
+    // Reuse auth middleware
+    auth().use(async (conn) => {
+        if (conn.req.context.user.role !== "admin") {
+            throw new Http.Forbidden();
+        }
+        return {};
+    });
 
-app.get(
-    "/reports",
-    adminAuth()
-        .query(pageSchema)
-        .handler(async (req) => {
-            // Business logic
-        }),
-);
-
+// Admin protected user creation endpoint
 app.post(
     "/users",
     adminAuth()
@@ -461,35 +456,111 @@ app.post(
             // Business logic
         }),
 );
+
+// Anyone authenticated user can access reports
+app.get(
+    "/reports",
+    auth()
+        .query(pageSchema)
+        .handler(async (req) => {
+            // Business logic
+        }),
+);
 ```
 
 ## Adopting Suvidha in Existing Projects
 
+Suvidha's `CtxRequest` extends the standard `Request` object with a `context` property.  
+Existing handlers that accept `Request` will also work with `CtxRequest`. Access the context using `CtxRequest`.
+
 <CodeGroup>
 
 ```ts Before
+declare function identity(req: Request): Promise<User>;
+
+const BookSchema = z.object({
+    title: z.string().min(3),
+    author: z.string().min(3),
+});
+
+type Book = z.infer<typeof BookSchema>;
+type User = { id: string; name: string };
+
+function validateBody(body: any, schema: z.ZodTypeAny) {
+    return schema.safeParse(body).success;
+}
+
+const authenticate = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        (req as any).user = await identity(req);
+        next();
+    } catch (_) {
+        return void res.status(401).json({ error: "Unauthorized" });
+    }
+};
+
+async function createBookHandler(
+    req: Request<any, any, Book>,
+    res: Response,
+): Promise<void> {
+    const user = (req as any).user as User;
+    const book = req.body;
+    // Business logic ...
+}
+
 app.post(
-    "/login",
+    "/books",
+    authenticate,
     (req, res, next) => {
-        if (!validateBody(req.body)) {
-            return res.status(400).json({ error: "Invalid" });
+        if (!validateBody(req.body, BookSchema)) {
+            return void res.status(400).json({ error: "Invalid" });
         }
         next();
     },
-    (req, res) => {
-        // Handler logic
-    },
+    createBookHandler,
 );
 ```
 
-```ts After
+```ts After {14, 22, 25}
+// accepts `CtxRequest` as well
+declare function identity(req: Request): Promise<User>;
+
+const BookSchema = z.object({
+    title: z.string().min(3),
+    author: z.string().min(3),
+});
+
+type Book = z.infer<typeof BookSchema>;
+type User = { id: string; name: string };
+
+const authenticate = async ({ req }: Conn) => {
+    // type of req: CtxRequest
+    const user = await identity(req).catch((_) => {
+        throw new Http.Unauthorized();
+    });
+    return { user }; // merge `{ user }` to context
+};
+
+// Use `CtxRequest` in handler, to get context data
+function createBookHandler(
+    req: CtxRequest<{ user: User }, Book>,
+    res: Response,
+): Promise<void> {
+    const user = req.context.user;
+    const book = req.body;
+    // Business logic ...
+}
+
 app.post(
-    "/login",
-    Suvidha.create()
-        .body(loginSchema)
-        .handler((req) => {
-            return handleLogin(req.body);
-        }),
+    "/books",
+    suvidha()
+        .use(authenticate)
+        .body(BookSchema)
+        .handler((req, res) => createBookHandler(req, res)),
 );
 ```
 

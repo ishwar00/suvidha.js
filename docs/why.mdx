@@ -176,16 +176,16 @@ type User = { role: string, name: string };
 
 declare async function verify(token: string): Promise<User>;
 
-async function authenticate(conn: Conn) {
-    const token = conn.req.headers['Authorization']!;
+async function authenticate({ req }: Conn) {
+    const token = req.headers['Authorization']!;
     const user = await verify(token).catch((_) => {
         throw new Http.Unauthorized(); // Convert auth failures to 401
     });
     return { user }; // add `User` to context
 }
 
-async function authorize(conn: Conn<{ user: User }>) {
-    const { role } = conn.req.context.user;
+async function authorize({ req }: Conn<{ user: User }>) {
+    const { role } = req.context.user;
     if (role !== "admin") {
         throw new Http.Forbidden();
     }

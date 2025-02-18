@@ -13,7 +13,11 @@ All handlers receive a `Conn` object, which contains.
 - `res`: The standard Express `Response` object.
 
 ```ts
-// Connection
+/**
+ * CtxRequest adds context to the Request object
+ * CtxRequest<Context, Params, ResBody, ReqBody, ReqQuery>,
+ * Request<            Params, ResBody, ReqBody, ReqQuery>
+ */
 export type Conn<T extends Context, ...> = {
     req: CtxRequest<T, ...>;
     res: Response;
