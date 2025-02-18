@@ -14,15 +14,26 @@
     "codeBlock": {
         "mode": "auto"
     },
+    "topbarCtaButton": {
+        "type": "github",
+        "url": "https://github.com/ishwar00/suvidha.js"
+    },
     "anchors": [],
     "navigation": [
         {
             "group": "Get Started",
-            "pages": ["introduction", "why"]
+            "pages": [
+                "introduction",
+                "why"
+            ]
         },
         {
             "group": "Usage",
-            "pages": ["usage/api", "usage/usage", "usage/limitation"]
+            "pages": [
+                "usage/api",
+                "usage/usage",
+                "usage/limitation"
+            ]
         },
         {
             "group": "Reference",
@@ -32,8 +43,5 @@
                 "reference/defaultHandlers"
             ]
         }
-    ],
-    "footerSocials": {
-        "github": "https://github.com/ishwar00/suvidha.js"
-    }
+    ]
 }
