@@ -7,11 +7,10 @@
     "types": "./build/types/index.d.ts",
     "directories": {
         "doc": "docs",
-        "example": "examples",
         "test": "test"
     },
     "files": [
-        "/build"
+        "./build"
     ],
     "scripts": {
         "test": "jest --testTimeout=12000",
