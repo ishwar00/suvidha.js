@@ -145,7 +145,11 @@ Override `onComplete` or `onErr`.
 
 ```typescript
 class MyHandlers extends DefaultHandlers {
-    onComplete(output: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+    onComplete(
+        output: unknown,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void {
         console.log(
             `Request completed. Output: ${JSON.stringify(output)}, URL: ${conn.req.originalUrl}`,
         );
@@ -165,7 +169,11 @@ Override `onComplete` or `onErr`.
 
 ```typescript
 class MyHandlers extends DefaultHandlers {
-    onComplete(output: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+    onComplete(
+        output: unknown,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void {
         conn.res.setHeader("Cache-Control", "no-cache");
         conn.res.setHeader("X-API-Version", "2.0");
         return super.onComplete(output, conn, next);

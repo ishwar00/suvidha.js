@@ -37,6 +37,9 @@ async function authentication(_: Conn) {
         user: {
             role: "admin",
             username: "ishwar",
+            nest: {
+                role: "nest",
+            },
         },
     };
 }
@@ -54,8 +57,8 @@ app.post(
         .body(BookSchema)
         .use(authentication)
         .use(roleCheck)
-        .use((conn) => {
-            if (conn.req.context.user.role !== "admin") {
+        .use(({ req }) => {
+            if (req.context.user.role !== "admin") {
                 throw new Http.Unauthorized();
             }
             return {};
