@@ -1,5 +1,5 @@
 import { z, ZodError } from "zod";
-import { Response, Request, NextFunction } from "express";
+import { Response, Request, NextFunction, RequestHandler } from "express";
 import * as core from "express-serve-static-core";
 import { Conn, Handlers } from "./Handlers";
 import { _Readonly, Merge } from "./utils.type";
@@ -130,7 +130,7 @@ export class Suvidha<
             res: Response<Reply>,
             next: core.NextFunction,
         ) => Reply,
-    ): core.RequestHandler<P, Reply, B, Q> {
+    ): RequestHandler<P, Reply, B, Q> {
         return async (
             req: Request<P, Reply, B, Q>,
             res: Response,
