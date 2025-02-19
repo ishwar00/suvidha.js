@@ -20,7 +20,7 @@ Suvidha provides a default formatter:
 
 ```typescript [expandable]
 export const defaultFormatter: Formatter = (status, body, meta) => {
-    const mapToStatus = (statusCode: number): ResonseFormat["status"] => {
+    const mapToStatus = (statusCode: number) => {
         if (statusCode >= 400 && statusCode < 500) {
             // Client error
             return "fail";
@@ -52,7 +52,7 @@ You can provide a custom formatter when creating `DefaultHandlers`:
 
 ```typescript
 const myFormatter: Formatter = (status, body, meta) => {
-    const isDev = process.env.NODE_ENV === "development";
+    const isDev = process.env["NODE_ENV"] === "development";
     // This will be 'body' of the response
     return {
         data: body,
@@ -91,8 +91,8 @@ export class DefaultHandlers implements Handlers {
     onErr(err: unknown, conn: Conn): Promise<void> | void {
         if (err instanceof Http.End) {
             const statusCode = err.getStatus();
-
             this.setHeaders(conn, err.getHeaders());
+
             return void conn.res
                 .status(statusCode)
                 .send(this.fmt(statusCode, err.getBody(), err.getMeta()));
@@ -149,7 +149,7 @@ export class DefaultHandlers implements Handlers {
     }
 
     onPostResponse(data: unknown, _: Conn): Promise<void> | void {
-        console.log(
+        console.warn(
             `Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`,
         );
     }
@@ -204,6 +204,6 @@ Called _after_ a response has been sent (headers already sent). Primarily used f
 
 ```typescript
 onPostResponse(data: unknown, conn: Conn): Promise<void> | void {
-    console.log(`Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`);
+    console.warn(`Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`);
 }
 ```

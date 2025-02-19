@@ -111,7 +111,7 @@ export class DefaultHandlers implements Handlers {
     }
 
     onPostResponse(data: unknown, _: Conn): Promise<void> | void {
-        console.log(
+        console.warn(
             `Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`,
         );
     }

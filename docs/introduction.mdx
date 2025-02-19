@@ -13,7 +13,8 @@ icon: "scroll"
 
 <CardGroup cols={2}>
     <Card title="Type-Safe Middleware" icon="shield-check">
-        Chain middleware like LEGO blocks, with auto-typed context propagation.
+        Chain middleware like LEGO blocks, with type inferred context
+        propagation.
     </Card>
     <Card title="Data Validation" icon="certificate">
         Zod-powered type safety for body, params, and queries—without cluttering
@@ -166,9 +167,10 @@ export type UserDTO = z.infer<typeof UserSchema>;
 
 ```json
 {
-    "statusCode": 201,
+    "status": "success",
     "data": {
         "id": "67adc39ea1ff4e9d60273236"
-    }
+    },
+    "meta": {}
 }
 ```

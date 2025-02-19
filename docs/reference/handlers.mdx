@@ -14,7 +14,7 @@ All handlers receive a `Conn` object, which contains.
 
 ```ts
 /**
- * CtxRequest adds context to the Request object
+ * CtxRequest adds context to the Express' Request object
  * CtxRequest<Context, Params, ResBody, ReqBody, ReqQuery>,
  * Request<            Params, ResBody, ReqBody, ReqQuery>
  */
@@ -224,7 +224,7 @@ interface Handlers {
 It's important to note:
 
 - If the request handler throws an error _before_ sending a response, `onErr` is called, _not_ `onPostResponse`.
-- If middleware sends a response, the request handler is not executed. Any errors thrown by the middleware _after_ sending the response are caught by `onPostResponse`.
+- If middleware sends a response, the request handler will not be executed. Any errors thrown by the middleware _after_ sending the response are caught by `onPostResponse`.
 
 Example implementation:
 

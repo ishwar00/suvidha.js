@@ -17,6 +17,24 @@ icon: "plug"
 
 # Core API Methods
 
+`use` middlewares receive a `Conn` object, which contains.
+
+- `req`: An extended Express `Request` object, which includes the `context`
+  property for accessing request-specific data added by middlewares.
+- `res`: The standard Express `Response` object.
+
+```ts
+/**
+ * CtxRequest adds context to the Express' Request object
+ * CtxRequest<Context, Params, ResBody, ReqBody, ReqQuery>,
+ * Request<            Params, ResBody, ReqBody, ReqQuery>
+ */
+export type Conn<T extends Context, ...> = {
+    req: CtxRequest<T, ...>;
+    res: Response;
+};
+```
+
 <AccordionGroup>
 <Accordion title="Suvidha(handlers: Handlers)" icon="code">
 main class to create a new instance of Suvidha, requires `Handlers` instance.
@@ -70,7 +88,7 @@ Validate and type the request body using Zod schemas
 ### Example
 
 ```ts
-Suvidha.create().body(
+suvidha().body(
     z.object({
         email: z.string().email(),
         password: z.string().min(8),
@@ -80,7 +98,7 @@ Suvidha.create().body(
 
 ### Behavior
 
-- Validates request body before middleware/handler execution
+- Validates request body before handler execution
 - Overrides default `any` type with schema inference
 
 </Accordion>
@@ -94,10 +112,12 @@ Validate and type URL path parameters
 ### Example
 
 ```ts
-.params(z.object({
-  userId: z.string().uuid(),
-  postId: z.coerce.number()
-}))
+suvidha().params(
+    z.object({
+        userId: z.string().uuid(),
+        postId: z.coerce.number(),
+    }),
+);
 ```
 
 ### Access in Handler
@@ -119,10 +139,12 @@ Validate and type query string parameters
 ### Example
 
 ```ts
-.query(z.object({
-  page: z.number().default(1),
-  sort: z.enum(['asc', 'desc'])
-}))
+suvidha().query(
+    z.object({
+        page: z.number().default(1),
+        sort: z.enum(["asc", "desc"]),
+    }),
+);
 ```
 
 ### Default Values
@@ -225,7 +247,7 @@ app.get(
 );
 ```
 
-Execution order is `query` -> `middyA` -> `middyB` -> `body` -> `handler`
+Execution order is `query` -> `middyA` -> `middyB` -> `params` -> `handler`
 
 </Note>
 
@@ -260,7 +282,8 @@ middlewares take `Conn` as input and return `Context | Promise<Context>`.
 ```ts
 // If middleware expects `{ user: User }` in context,
 // specify the constraint in type signature, that way
-// Suvidha will ensure that middleware is called in the correct order.
+// Suvidha will ensure that middleware is called
+// only when expected context data is available
 type ExpectedContext = { user: User };
 
 const middleware = (conn: Conn<ExpectedContext>) => {
@@ -320,13 +343,13 @@ app.get(
     "/reports",
     suvidha()
         .use(() => ({ auth: getAuth() })) // { auth: Auth }
-        .use((conn) => ({
+        .use(({ req }) => ({
             // Requires previous auth
-            user: getUser(conn.context.auth), // + { user: User }
+            user: getUser(req.context.auth), // + { user: User }
         }))
-        .use(async (conn) => ({
+        .use(async ({ req }) => ({
             // Requires user
-            report: await fetchReport(conn.context.user), // + { report: Report }
+            report: await fetchReport(req.context.user), // + { report: Report }
         }))
         .handler((req) => req.context.report), // Final: auth + user + report
 );
@@ -336,7 +359,7 @@ Reorder middlewares → Type error ← Context dependencies broken.
 
 ## Loosely Coupled Business Logic
 
-Handle responses using `onComplete` and `onErr` when using `Suvidha` with `DefaultHandlers`.
+Handle responses using `onComplete` and `onErr` when using `Suvidha` with `Handlers`.
 This separates your core business logic from framework-specific response methods, keeping your code cleaner by delegating response handling to the handlers.
 
 ```ts
@@ -358,11 +381,12 @@ const requestHandler = (user: UserDTO) => {
 app.post(
     "/users",
     suvidha()
-        .body(UserSchema)
         .use(authenticate)
         .use(roleCheck)
+        .body(UserSchema)
         .handler(async (req) => {
-            const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
+            const newUser = req.body;
+            const { role } = req.context.user;
             return createUserHandler(newUser, role); // Execute business logic
         }),
 );
@@ -424,14 +448,14 @@ If you have common middlewares accross multiple routes, you can create a `Suvidh
 ```ts {8, 17, 29, 39}
 import { Suvidha, DefaultHandlers, Http } from "suvidha";
 
-declare function authenticate(req: any): Promise<{ role: string }>;
+declare function authenticate(req: Request): Promise<{ role: string }>;
 
 const suvidha = () => Suvidha.create(new DefaultHandlers());
 
 // instance with middlewares for authentication
 const auth = () =>
-    suvidha().use(async (conn) => {
-        const user = await authenticate(conn.req).catch((_) => {
+    suvidha().use(async ({ req }) => {
+        const user = await authenticate(req).catch((_) => {
             throw new Http.Unauthorized();
         });
         return { user };
@@ -440,8 +464,8 @@ const auth = () =>
 // instance with middlewares for admin authorization
 const adminAuth = () =>
     // Reuse auth middleware
-    auth().use(async (conn) => {
-        if (conn.req.context.user.role !== "admin") {
+    auth().use(async ({ req }) => {
+        if (req.context.user.role !== "admin") {
             throw new Http.Forbidden();
         }
         return {};
@@ -486,8 +510,13 @@ const BookSchema = z.object({
 type Book = z.infer<typeof BookSchema>;
 type User = { id: string; name: string };
 
-function validateBody(body: any, schema: z.ZodTypeAny) {
-    return schema.safeParse(body).success;
+function validateBody(req: Request, res: Response, zodSchema: ZodType<any>) {
+    try {
+        req.body = zodSchema.parse(req.body);
+        next();
+    } catch (err) {
+        return void res.status(400).send("Bad Request");
+    }
 }
 
 const authenticate = async (
@@ -515,12 +544,7 @@ async function createBookHandler(
 app.post(
     "/books",
     authenticate,
-    (req, res, next) => {
-        if (!validateBody(req.body, BookSchema)) {
-            return void res.status(400).json({ error: "Invalid" });
-        }
-        next();
-    },
+    (req, res) => validateBody(req, res, BookSchema),
     createBookHandler,
 );
 ```
@@ -547,7 +571,7 @@ const authenticate = async ({ req }: Conn) => {
 
 // Use `CtxRequest` in handler, to get context data
 function createBookHandler(
-    req: CtxRequest<{ user: User }, Book>,
+    req: CtxRequest<{ user: User }, any, any, Book>,
     res: Response,
 ): Promise<void> {
     const user = req.context.user;

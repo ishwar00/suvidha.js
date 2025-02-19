@@ -22,18 +22,11 @@
     "navigation": [
         {
             "group": "Get Started",
-            "pages": [
-                "introduction",
-                "why"
-            ]
+            "pages": ["introduction", "why"]
         },
         {
             "group": "Usage",
-            "pages": [
-                "usage/api",
-                "usage/usage",
-                "usage/limitation"
-            ]
+            "pages": ["usage/api", "usage/action", "usage/limitation"]
         },
         {
             "group": "Reference",

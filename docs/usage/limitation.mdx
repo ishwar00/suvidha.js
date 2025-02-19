@@ -3,7 +3,7 @@ title: Limitations
 icon: "triangle-exclamation"
 ---
 
-While Suvidha enhances Express.js with type safety and structure, it has some intentional trade-offs:
+While Suvidha enhances Express.js with type safety and structure, it has some trade-offs:
 
 ### 1. **TypeScript Required**
 
@@ -53,7 +53,7 @@ req.context.user.name = "Bob"; // No error, but violates immutability intent
 - To use `Http` classes or `Protocol` objects in custom handlers, you must implement:
     ```ts
     interface Handlers {
-        onComplete(output: unknown, conn: Conn): void;
+        onComplete(output: unknown, conn: Conn, next: NextFunction): void;
         // ...other methods
     }
     ```
@@ -65,6 +65,3 @@ req.context.user.name = "Bob"; // No error, but violates immutability intent
 - Requires understanding of Zod, type chaining, and Suvidha’s flow (vs raw Express).
 
 ---
-
-**Why These Trade-Offs?**
-Suvidha prioritizes **type safety** and **predictable flow** over flexibility. It’s ideal for teams valuing strict contracts over Express’s "anything goes" approach.
