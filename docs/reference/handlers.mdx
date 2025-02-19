@@ -8,7 +8,7 @@ They handle validation, responses, and more.
 
 All handlers receive a `Conn` object, which contains the following:
 
-- `req`: An extended Express `Request` object, which includes the `context`.
+- `req`: An extended Express' `Request` object, which includes the `context`.
   property for accessing request-specific data added by middlewares.
 - `res`: The standard Express `Response` object.
 
@@ -75,7 +75,7 @@ interface Handlers {
 
 - Handles Zod schema validation failures gracefully.
 - Typically sends an appropriate error response.
-- It can call `next(err)` to delegate error handling to Express's default error handler or other middleware.
+- It can call `next(err)` to delegate error handling to Express' default error handler or other middleware.
 
 **Trigger Conditions:**
 
@@ -85,7 +85,7 @@ interface Handlers {
 
 - `err`: The `ZodError` object containing details about the validation failure.
 - `conn`: The `Conn` object containing the request (`conn.req`) and response (`conn.res`) objects.
-- `next`: The Express `next` function.
+- `next`: The Express' `next` function.
 
 Example implementation:
 

@@ -101,9 +101,9 @@ describe("Suvidha Library", () => {
                     .use(() => {
                         return { role: "user" };
                     })
-                    .use((conn) => {
-                        if (conn.req.context.role !== "admin") {
-                            conn.res.status(403).json(conn.req.context);
+                    .use((req, res) => {
+                        if (req.context.role !== "admin") {
+                            res.status(403).json(req.context);
                         }
                         return {};
                     })
@@ -234,10 +234,10 @@ describe("Suvidha Library", () => {
             app.post(
                 "/test-modified-body",
                 suvidha()
-                    .use(async (conn) => {
+                    .use(async (req) => {
                         // Add field to body before validation
-                        conn.req.body = {
-                            ...conn.req.body,
+                        req.body = {
+                            ...req.body,
                             addedByMiddleware: true,
                         };
                         return {};
@@ -296,8 +296,8 @@ describe("Suvidha Library", () => {
                 suvidha()
                     .use(() => ({ key1: "A" })) // 1. Add key1
                     .query(z.object({ val: z.string() })) // 2. Validate query
-                    .use((conn) => ({
-                        key2: `B-${conn.req.context.key1}`, // Uses key1
+                    .use((req) => ({
+                        key2: `B-${req.context.key1}`, // Uses key1
                     }))
                     .handler((req, res) => {
                         res.json(req.context); // Should have key1 + key2
@@ -318,10 +318,10 @@ describe("Suvidha Library", () => {
                 "/test-access-validated-data",
                 suvidha()
                     .body(z.object({ name: z.string() })) // Validate first
-                    .use(async (conn) => {
+                    .use(async (req) => {
                         await setTimeout(100);
                         // Access parsed body
-                        return { name: conn.req.body.name.toUpperCase() };
+                        return { name: req.body.name.toUpperCase() };
                     })
                     .handler((req, res) => {
                         res.json(req.context);

@@ -102,7 +102,7 @@ export async function createUserHandler(user: UserDTO, role: string) {
 ### middlewares.ts
 
 ```ts
-import { Conn, Http } from "suvidha";
+import { Http, CtxRequest } from "suvidha";
 
 interface User {
     role: string;
@@ -114,7 +114,7 @@ const verify = async (token: string): Promise<User> => {
     return { role: "admin" }; // Example
 };
 
-export const authenticate = async ({ req }: Conn) => {
+export const authenticate = async (req: CtxRequest) => {
     const token = req.headers["authorization"];
     if (!token) {
         throw new Http.Unauthorized();
@@ -125,8 +125,8 @@ export const authenticate = async ({ req }: Conn) => {
     return { user };
 };
 
-export const roleCheck = (conn: Conn<{ user: User }>) => {
-    if (conn.req.context.user.role !== "admin") {
+export const roleCheck = (req: CtxRequest<{ user: User }>) => {
+    if (req.context.user.role !== "admin") {
         throw Http.Forbidden.body({ message: "Admin access required" });
     }
     return {};

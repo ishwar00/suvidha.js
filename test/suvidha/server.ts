@@ -4,6 +4,7 @@ import { Suvidha, DefaultHandlers, Http, Handlers, Conn } from "../../src";
 import { Book, BookSchema, Id, IdSchema } from "../schema";
 import { BooksController } from "./controller";
 import { setTimeout } from "timers/promises";
+import { CtxRequest } from "../../src/suvidha";
 
 class CustomHandlers extends DefaultHandlers implements Handlers {
     override onComplete(output: unknown, conn: Conn): Promise<void> | void {
@@ -31,7 +32,7 @@ app.get(
     }),
 );
 
-async function authentication(_: Conn) {
+async function authentication(_: CtxRequest) {
     await setTimeout(500);
     return {
         user: {
@@ -44,8 +45,8 @@ async function authentication(_: Conn) {
     };
 }
 
-const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
-    if (conn.req.context.user.role !== "admin") {
+const roleCheck = (req: CtxRequest<{ user: { role: string } }>) => {
+    if (req.context.user.role !== "admin") {
         throw Http.Forbidden.body({ message: "Admin access required" });
     }
     return {};
@@ -57,7 +58,7 @@ app.post(
         .body(BookSchema)
         .use(authentication)
         .use(roleCheck)
-        .use(({ req }) => {
+        .use((req) => {
             if (req.context.user.role !== "admin") {
                 throw new Http.Unauthorized();
             }

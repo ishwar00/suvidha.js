@@ -28,7 +28,7 @@ While Suvidha enhances Express.js with type safety and structure, it has some tr
 Suvidha enforces **shallow readonly** constraints on context objects. Although root-level keys are immutable, nested objects can still be modified:
 
 ```ts
-.use(conn => ({
+.use(() => ({
   user: { name: "Alice" } // root key "user" is readonly
 }))
 

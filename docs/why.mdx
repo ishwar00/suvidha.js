@@ -178,7 +178,7 @@ type User = { role: string, name: string };
 
 declare async function verify(token: string): Promise<User>;
 
-async function authenticate({ req }: Conn) {
+async function authenticate(req: CtxRequest) {
     const token = req.headers['Authorization']!;
     const user = await verify(token).catch((_) => {
         throw new Http.Unauthorized(); // Convert auth failures to 401
@@ -186,7 +186,7 @@ async function authenticate({ req }: Conn) {
     return { user }; // add `User` to context
 }
 
-async function authorize({ req }: Conn<{ user: User }>) {
+async function authorize(req: CtxRequest<{ user: User }>) {
     const { role } = req.context.user;
     if (role !== "admin") {
         throw new Http.Forbidden();
@@ -240,7 +240,7 @@ To understand how `Suvidha` facilitates this, let's look at the flow.
 
 #### Flow
 
-Lines are highlighted wherever the `Handlers`, `use` middlewares are called including request handler.
+Lines are highlighted wherever the `Handlers` and `use` middlewares are called including request handler.
 
 <Tabs>
 
@@ -321,7 +321,7 @@ try {
             const useFn = this.useHandlers[ref]!;
             req.context = {
                 ...req.context,
-                ...(await useFn(conn)),
+                ...(await useFn(req, res)),
             };
         }
 

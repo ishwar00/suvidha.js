@@ -1,6 +1,6 @@
 {
     "name": "suvidha",
-    "version": "0.2.2",
+    "version": "0.3.2",
     "description": "Suvidha is a lightweight, type-safe Express.js library that adds powerful validation, middleware context management, and response handling.",
     "main": "./build/cjs/index.js",
     "module": "./build/esm/index.js",
@@ -16,7 +16,7 @@
         "test": "jest --testTimeout=12000",
         "fmt": "npx prettier --write .",
         "clean": "rm -rf ./build",
-        "check": "npx tsc --noEmit",
+        "check": "npx tsc -b ./tsconfig.check.json",
         "build": "tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json ./tsconfig.types.json"
     },
     "author": "ishwar gowda",
