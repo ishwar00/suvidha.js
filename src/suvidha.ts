@@ -25,8 +25,10 @@ export class Suvidha<
     C extends Context = {},
     Built extends keyof Suvidha = never,
 > {
-    private readonly useHandlers: ((conn: Conn<any, any, any, any>) => any)[] =
-        [];
+    private readonly useHandlers: ((
+        req: CtxRequest<any, any, any, any, any>,
+        res: Response,
+    ) => any)[] = [];
     private readonly order: (DataRef | number)[] = [];
     private schemaMap: Record<DataRef, z.ZodType<any>> = {
         body: z.any(),
@@ -66,7 +68,14 @@ export class Suvidha<
 
     use<T extends Context>(
         middleware: (
-            conn: Conn<_Readonly<C>, _Readonly<B>, _Readonly<P>, _Readonly<Q>>,
+            req: CtxRequest<
+                _Readonly<C>,
+                _Readonly<P>,
+                any,
+                _Readonly<B>,
+                _Readonly<Q>
+            >,
+            res: Response,
         ) => Promise<T> | T,
     ) {
         this.order.push(this.useHandlers.length);
@@ -146,7 +155,7 @@ export class Suvidha<
                         const useFn = this.useHandlers[ref]!;
                         req.context = {
                             ...req.context,
-                            ...(await useFn(conn)),
+                            ...(await useFn(req, res)),
                         };
                     }
 

@@ -4,4 +4,4 @@ dist
 Buffer.md
 */**/buff
 prompt.md
-./build
+build

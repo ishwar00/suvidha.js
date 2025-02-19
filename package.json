@@ -16,7 +16,7 @@
         "test": "jest --testTimeout=12000",
         "fmt": "npx prettier --write .",
         "clean": "rm -rf ./build",
-        "check": "npx tsc --noEmit",
+        "check": "npx tsc -b ./tsconfig.check.json",
         "build": "tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json ./tsconfig.types.json"
     },
     "author": "ishwar gowda",
