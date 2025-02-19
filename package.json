@@ -40,7 +40,7 @@
         "validation-layer",
         "request-validation"
     ],
-    "license": "ISC",
+    "license": "MIT",
     "devDependencies": {
         "@babel/core": "^7.25.2",
         "@babel/preset-env": "^7.25.4",
