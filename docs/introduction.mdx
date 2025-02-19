@@ -106,7 +106,7 @@ export async function createUserHandler(user: UserDTO, role: string) {
                 message: "Email already exists",
             });
         }
-        throw err; // Propagate to Suvidha's onErr handler
+        throw err;
     }
 }
 ```
@@ -116,10 +116,12 @@ export async function createUserHandler(user: UserDTO, role: string) {
 <Tab title="middlewares.ts">
 
 ```ts
-import { Conn, Http } from "suvidha";
+import { Http, CtxRequest } from "suvidha";
+
+type User = { role: string };
 
 // Mock authentication service
-const verify = async (token: string) => {
+const verify = async (token: string): Promise<User> => {
     // Replace with real auth logic
     return { role: "admin" };
 };
@@ -127,7 +129,7 @@ const verify = async (token: string) => {
 // Middlewares add data to the context, which will be available
 // to all subsequent middlewares and handlers
 
-export const authenticate = async ({ req }: Conn) => {
+export const authenticate = async (req: CtxRequest) => {
     const token = req.headers["authorization"]!;
     const user = await verify(token).catch((_) => {
         throw new Http.Unauthorized(); // Convert auth failures to 401
@@ -136,8 +138,8 @@ export const authenticate = async ({ req }: Conn) => {
 };
 
 // Role guard: Requires admin privileges
-// This middleware expects { user: { role: string } } in the context
-export const roleCheck = ({ req }: Conn<{ user: { role: string } }>) => {
+// This middleware expects { user: User } in the context
+export const roleCheck = (req: CtxRequest<{ user: User }>) => {
     if (req.context.user.role !== "admin") {
         throw Http.Forbidden.body({ message: "Admin access required" });
     }

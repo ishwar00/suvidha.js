@@ -10,7 +10,7 @@ Suvidha's default handlers offer a quick start for request/response management. 
 
 ### Introduction
 
-Default handlers provide a pre-configured setup. They handle response formatting, errors, and successful requests, allowing you to focus on your logic.. They're ready to use yet customizable.
+Default handlers provide a pre-configured setup. They handle response formatting, errors, and successful requests, allowing you to focus on your logic. They're ready to use yet customizable.
 
 ### Basic Usage
 
@@ -45,7 +45,7 @@ Default handlers are created with `new DefaultHandlers()`. `suvidha()` uses them
 
 ### Extending
 
-Extend the default handlers to customize behavior. Create a class that inherits from DefaultHandlers and overrides its methods.
+Extend the default handlers to customize behavior. Create a class that inherits from `DefaultHandlers` and overrides its methods.
 
 ```typescript
 import { Handlers, Conn } from "suvidha";
@@ -80,7 +80,7 @@ app.get(
     "/users/:id",
     Suvidha.create(new SimpleCustomHandlers())
         .params(z.object({ id: z.string().uuid() }))
-        .use(async ({ req }) => {
+        .use(async (req) => {
             const user = await getUser(req.params.id);
             if (!user) throw Http.NotFound.body("User not found");
             return { user };
@@ -258,7 +258,7 @@ class MyHandlers extends DefaultHandlers {
 
 #### Middleware Integration
 
-Use Suvidha's .use() method for middleware, which preserves type safety and allows context propagation.
+Use Suvidha's `.use()` method for middleware, which preserves type safety and allows context propagation.
 
 ```typescript
 import { Suvidha, DefaultHandlers, Http } from "suvidha";
@@ -274,7 +274,7 @@ declare function authenticate(req: Request): Promise<User>;
 const suvidha = () => Suvidha.create(new DefaultHandlers());
 
 const auth = () =>
-    suvidha().use(async ({ req }) => {
+    suvidha().use(async (req) => {
         const user = await authenticate(req).catch((_) => {
             throw new Http.Unauthorized();
         });
@@ -282,7 +282,7 @@ const auth = () =>
     });
 
 const adminOnly = () =>
-    auth().use(async ({ req }) => {
+    auth().use(async (req) => {
         if (req.context.user.role !== "admin") {
             throw new Http.Forbidden();
         }

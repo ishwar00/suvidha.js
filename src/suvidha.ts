@@ -4,6 +4,21 @@ import * as core from "express-serve-static-core";
 import { Conn, Handlers } from "./Handlers";
 import { _Readonly, Merge } from "./utils.type";
 
+/**
+ * Extends the standard Express.js `Request` object with a `context` property.
+ * This allows you to store and access request-specific data throughout the
+ * request lifecycle, particularly useful for middleware communication and
+ * data sharing between middleware and request handler.
+ *
+ * @template C The type of the context object. Defaults to an empty object `{}`.
+ * @template P The type of the route parameters. Defaults to `Record<string, any>`.
+ * @template ResBody The type of the response body. Defaults to `any`.
+ * @template ReqBody The type of the request body. Defaults to `any`.
+ * @template ReqQuery The type of the request query parameters. Defaults to
+ *           `core.Query` from Express.js.
+ *
+ * @extends Express.js Request object
+ */
 export interface CtxRequest<
     C extends Context = {},
     P extends Record<string, any> = Record<string, any>,
@@ -11,6 +26,11 @@ export interface CtxRequest<
     ReqBody extends any = any,
     ReqQuery extends core.Query = core.Query,
 > extends Request<P, ResBody, ReqBody, ReqQuery> {
+    /**
+     * An object for storing request-specific data. This is typically used
+     * to share data between middleware and handlers. The data stored here
+     * is type-safe according to the generic type `C`.
+     */
     context: C;
 }
 

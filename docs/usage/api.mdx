@@ -17,22 +17,23 @@ icon: "plug"
 
 # Core API Methods
 
-`use` middlewares receive a `Conn` object, which contains:
-
-- `req`: An extended Express `Request` object, which includes the `context`
-  property for accessing request-specific data added by middlewares.
-- `res`: The standard Express `Response` object.
+Suvidha uses `CtxRequest` which extends the standard Express.js `Request` object with a `context` property,
+for accessing request-specific data added by middlewares.
 
 ```ts
 /**
- * CtxRequest adds context to the Express' Request object
- * CtxRequest<Context, Params, ResBody, ReqBody, ReqQuery>,
- * Request<            Params, ResBody, ReqBody, ReqQuery>
+ * Extends the standard Express.js `Request` object with a `context` property.
+ * This allows you to store and access request-specific data throughout the
+ * request lifecycle, particularly useful for middleware communication and
+ * data sharing between middleware and request handler.
+ *
+ * @template C The type of the context object. Defaults to an empty object `{}`.
+ *
+ * @extends Express.js Request object
  */
-export type Conn<T extends Context, ...> = {
-    req: CtxRequest<T, ...>;
-    res: Response;
-};
+interface CtxRequest<C extends Context = {}, ...> extends Request<...> {
+    context: C;
+}
 ```
 
 <AccordionGroup>
@@ -46,29 +47,6 @@ constructor(handlers: Handlers);
 </Accordion>
 
 <Accordion title="Handlers" icon="code">
-
-Interface for defining handlers for `onSchemaErr`, `onComplete`, `onPostResponse`, and `onErr`.
-
-```ts
-interface Handlers {
-    onSchemaErr(
-        err: ZodError,
-        conn: Conn,
-        next: NextFunction,
-    ): Promise<void> | void;
-    onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void;
-    onComplete(
-        output: unknown,
-        conn: Conn,
-        next: NextFunction,
-    ): Promise<void> | void;
-    onPostResponse(
-        outputOrErr: unknown,
-        conn: Conn,
-        next: NextFunction,
-    ): Promise<void> | void;
-}
-```
 
 Refer to [Handlers](/reference/handlers) for more details.
 
@@ -167,26 +145,29 @@ Any exceptions thrown will be handled by `onErr` handler.
 - **Order-Sensitive**: Middleware executes in the order of declaration.
 - **Type Accumulation**: Each middleware's return type merges with previous context.
 - **Immutable Context**: Each middleware gets current context in `Readonly` wrapper to prevent mutations.
-- **Early Termination**: Middleware can end response with `conn.res.send()`.
+- **Early Termination**: Middleware can end response with `res.send()`.
 
 </Accordion> </AccordionGroup>
 
-<Note>Merging is the same as using the ... spread operator, `new_ctx = { ...current_ctx, ...ctx }` </Note>
+<Note>Merging is the same as using the `...` spread operator, `new_ctx = { ...current_ctx, ...ctx }` </Note>
 
 ### Middleware Signature
 
 ```ts
-type Middleware<Ctx> = (conn: Conn<CurrentContext>) => Ctx | Promise<Ctx>;
+type Middleware<Ctx> = (
+    req: CtxRequest<CurrentContext>,
+    res: Response,
+) => Ctx | Promise<Ctx>;
 ```
 
 ### Example
 
 ```ts
-.use(async (conn) => ({
-  user: await authenticate(conn.req)
+.use(async (req) => ({
+  user: await authenticate(req)
 }))
-.use((conn) => ({
-  permissions: getPermissions(conn.context.user)
+.use((req) => ({
+  permissions: getPermissions(req.context.user)
 }))
 ```
 
@@ -219,13 +200,6 @@ Defines the final request handler with full type safety.
 - `req` is express' `Request` object with added context.
 - `res` is express' `Request` object.
 - `next` is express' `NextFunction` to call next middleware.
-
-### Return Handling
-
-| Return Type                  | Behavior                                                 |
-| ---------------------------- | -------------------------------------------------------- |
-| `undefined`                  | Must call `res.send()` manually to send the response.    |
-| `Http.End` \| `Other Values` | Processed by `onComplete` handler (If headers not sent). |
 
 </Accordion>
 </AccordionGroup>
@@ -277,7 +251,7 @@ app.post(
 
 ## Writing Middlewares
 
-middlewares take `Conn` as input and return `Context | Promise<Context>`.
+middlewares take `CtxRequest` and `Response` as input arguments and return `Context | Promise<Context>`.
 
 ```ts
 // Middleware expects { user: User } in the context.
@@ -286,7 +260,7 @@ middlewares take `Conn` as input and return `Context | Promise<Context>`.
 // only when expected context data is available.
 type ExpectedContext = { user: User };
 
-const middleware = (conn: Conn<ExpectedContext>) => {
+const middleware = (req: CtxRequest<ExpectedContext>, res: Response) => {
     // business logic
     return {
         // return context that will be merged with the current context
@@ -343,11 +317,11 @@ app.get(
     "/reports",
     suvidha()
         .use(() => ({ auth: getAuth() })) // { auth: Auth }
-        .use(({ req }) => ({
+        .use((req) => ({
             // Requires previous auth
             user: getUser(req.context.auth), // + { user: User }
         }))
-        .use(async ({ req }) => ({
+        .use(async (req) => ({
             // Requires user
             report: await fetchReport(req.context.user), // + { report: Report }
         }))
@@ -371,7 +345,7 @@ const UserSchema = z.object({
 type UserDTO = z.infer<typeof UserSchema>;
 
 // Keep your business logic clean and loosely coupled
-const requestHandler = (user: UserDTO) => {
+const requestHandler = (user: UserDTO, role: string) => {
     // Execute business logic
     return {
         id: "67619c28758da37270b925a8",
@@ -387,14 +361,14 @@ app.post(
         .handler(async (req) => {
             const newUser = req.body;
             const { role } = req.context.user;
-            return createUserHandler(newUser, role); // Execute business logic
+            return requestHandler(newUser, role); // Execute business logic
         }),
 );
 ```
 
 ## Suvidha as data validation middleware
 
-To use Suvidha solely for data validation with TypeScript inference, implement `onSchemaErr` method.
+To use Suvidha solely as data validation middleware with TypeScript inference, implement `onSchemaErr` method.
 
 ```ts {38}
 // Customize the error response
@@ -454,7 +428,7 @@ const suvidha = () => Suvidha.create(new DefaultHandlers());
 
 // instance with middlewares for authentication
 const auth = () =>
-    suvidha().use(async ({ req }) => {
+    suvidha().use(async (req) => {
         const user = await authenticate(req).catch((_) => {
             throw new Http.Unauthorized();
         });
@@ -464,7 +438,7 @@ const auth = () =>
 // instance with middlewares for admin authorization
 const adminAuth = () =>
     // Reuse auth middleware
-    auth().use(async ({ req }) => {
+    auth().use((req) => {
         if (req.context.user.role !== "admin") {
             throw new Http.Forbidden();
         }
@@ -561,7 +535,7 @@ const BookSchema = z.object({
 type Book = z.infer<typeof BookSchema>;
 type User = { id: string; name: string };
 
-const authenticate = async ({ req }: Conn) => {
+const authenticate = async (req: CtxRequest) => {
     // type of req: CtxRequest
     const user = await identity(req).catch((_) => {
         throw new Http.Unauthorized();
