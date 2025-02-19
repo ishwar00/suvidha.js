@@ -57,16 +57,7 @@ import { createUserHandler } from "./controller";
 const app = express();
 app.use(express.json());
 
-const formatter: Formatter = (status, body, meta) => {
-    const isDev = process.env["NODE_ENV"] === "development";
-    return {
-        statusCode: status,
-        data: body,
-        meta: isDev ? meta : undefined,
-    };
-};
-
-const suvidha = () => Suvidha.create(new DefaultHandlers(formatter));
+const suvidha = () => Suvidha.create(new DefaultHandlers());
 
 app.post(
     "/users",

@@ -20,7 +20,7 @@ icon: "scroll"
         your routes.
     </Card>
     <Card title="Framework Independence" icon="code-branch">
-        Keep your business logic clean no Express.js baggage.
+        Keep your business logic clean. No Express.js baggage.
     </Card>
     <Card title="Explicit Control" icon="sliders">
         Fine-grained control over request/response lifecycle
@@ -58,19 +58,8 @@ import { createUserHandler } from "./controller";
 const app = express();
 app.use(express.json());
 
-// Formatter for response body
-const formatter: Formatter = (status, body, meta) => {
-    const isDev = process.env["NODE_ENV"] === "development";
-    // Example response format
-    return {
-        statusCode: status,
-        data: body,
-        meta: isDev ? meta : undefined,
-    };
-};
-
 // Configure Suvidha with default handlers
-const suvidha = () => Suvidha.create(new DefaultHandlers(formatter));
+const suvidha = () => Suvidha.create(new DefaultHandlers());
 
 // Protected user creation endpoint
 app.post(
