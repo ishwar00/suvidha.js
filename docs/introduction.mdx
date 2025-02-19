@@ -66,7 +66,7 @@ const suvidha = () => Suvidha.create(new DefaultHandlers());
 app.post(
     "/users",
     suvidha()
-        .use(authenticate) // authenticate
+        .use(authenticate)
         .use(roleCheck) // check permissions
         .body(UserSchema) // Validate request body
         .handler(async (req) => {
@@ -84,7 +84,7 @@ app.listen(3000);
 
 <Tab title="controller.ts">
 
-```ts
+```ts {13, 17}
 import { Http }  "suvidha";
 import { UserDTO } from "./dto";
 
@@ -97,9 +97,11 @@ declare function createUser(
 export async function createUserHandler(user: UserDTO, role: string) {
     try {
         const result = await createUser(user, role);
+        // return "body with HTTP 201 Created status"
         return Http.Created.body(result);
     } catch (err: any) {
         if (err.code === "DUPLICATE_EMAIL") {
+            // throw "body with HTTP 409 Conflict status"
             throw Http.Conflict.body({
                 message: "Email already exists",
             });
@@ -122,7 +124,9 @@ const verify = async (token: string) => {
     return { role: "admin" };
 };
 
-// Auth middleware: Adds user to context
+// Middlewares add data to the context, which will be available
+// to all subsequent middlewares and handlers
+
 export const authenticate = async ({ req }: Conn) => {
     const token = req.headers["authorization"]!;
     const user = await verify(token).catch((_) => {
@@ -132,12 +136,12 @@ export const authenticate = async ({ req }: Conn) => {
 };
 
 // Role guard: Requires admin privileges
-// This middleware expects { user: { role: string } } in context
-export const roleCheck = (conn: Conn<{ user: { role: string } }>) => {
-    if (conn.req.context.user.role !== "admin") {
+// This middleware expects { user: { role: string } } in the context
+export const roleCheck = ({ req }: Conn<{ user: { role: string } }>) => {
+    if (req.context.user.role !== "admin") {
         throw Http.Forbidden.body({ message: "Admin access required" });
     }
-    return {}; // Nothing to add to context
+    return {}; // Nothing to add to the context
 };
 ```
 
