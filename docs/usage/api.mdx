@@ -78,12 +78,12 @@ Refer to [Handlers](/reference/handlers) for more details.
 
 ### Purpose
 
-Validates and types the request body using Zod schemas
+Validates and types the request body using Zod schemas.
 
 ### Parameters
 
-- `schema`: Zod schema definition
-- Returns: Chainable Suvidha instance
+- `schema`: Zod schema definition.
+- Returns: Chainable Suvidha instance.
 
 ### Example
 
@@ -98,8 +98,8 @@ suvidha().body(
 
 ### Behavior
 
-- Validates request body before handler execution
-- Overrides default `any` type with schema inference
+- Validates request body before handler execution.
+- Overrides default `any` type with schema inference.
 
 </Accordion>
 
@@ -165,9 +165,9 @@ Any exceptions thrown will be handled by `onErr` handler.
 
 <AccordionGroup> <Accordion title="Key Characteristics" icon="key">
 - **Order-Sensitive**: Middleware executes in the order of declaration.
-- **Type Accumulation**: Each middleware's return type merges with previous context
-- **Immutable Context**: Each middleware gets current context in `Readonly` wrapper to prevent mutations
-- **Early Termination**: Middleware can end response with `conn.res.send()`
+- **Type Accumulation**: Each middleware's return type merges with previous context.
+- **Immutable Context**: Each middleware gets current context in `Readonly` wrapper to prevent mutations.
+- **Early Termination**: Middleware can end response with `conn.res.send()`.
 
 </Accordion> </AccordionGroup>
 
@@ -216,16 +216,16 @@ Defines the final request handler with full type safety.
 
 ### Parameters
 
-- `req` is express' `Request` object with added context
-- `res` is express' `Request` object
-- `next` is express' `NextFunction` to call next middleware
+- `req` is express' `Request` object with added context.
+- `res` is express' `Request` object.
+- `next` is express' `NextFunction` to call next middleware.
 
 ### Return Handling
 
-| Return Type                  | Behavior                                                |
-| ---------------------------- | ------------------------------------------------------- |
-| `undefined`                  | Must call `res.send()` manually to send the response    |
-| `Http.End` \| `Other Values` | Processed by `onComplete` handler (If headers not sent) |
+| Return Type                  | Behavior                                                 |
+| ---------------------------- | -------------------------------------------------------- |
+| `undefined`                  | Must call `res.send()` manually to send the response.    |
+| `Http.End` \| `Other Values` | Processed by `onComplete` handler (If headers not sent). |
 
 </Accordion>
 </AccordionGroup>
@@ -247,7 +247,7 @@ app.get(
 );
 ```
 
-Execution order is `query` -> `middyA` -> `middyB` -> `params` -> `handler`
+Execution order is `query` -> `middyA` -> `middyB` -> `params` -> `handler`.
 
 </Note>
 
@@ -283,7 +283,7 @@ middlewares take `Conn` as input and return `Context | Promise<Context>`.
 // Middleware expects { user: User } in the context.
 // specify the constraint in type signature, that way
 // Suvidha will ensure that middleware is called
-// only when expected context data is available
+// only when expected context data is available.
 type ExpectedContext = { user: User };
 
 const middleware = (conn: Conn<ExpectedContext>) => {

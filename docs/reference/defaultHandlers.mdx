@@ -42,11 +42,11 @@ export const defaultFormatter: Formatter = (status, body, meta) => {
 
 The default formatter creates a `{ status, data, meta }` object that maps HTTP status codes.
 
-| HTTP Status Code Range | `status` Field Value | Description                                    |
-| ---------------------- | -------------------- | ---------------------------------------------- |
-| 1xx\, 2xx\, 3xx        | `"success"`          | Successful requests or informational responses |
-| 4xx                    | `"fail"`             | Client-side errors                             |
-| 5xx                    | `"error"`            | Server-side errors                             |
+| HTTP Status Code Range | `status` Field Value | Description                                     |
+| ---------------------- | -------------------- | ----------------------------------------------- |
+| 1xx\, 2xx\, 3xx        | `"success"`          | Successful requests or informational responses. |
+| 4xx                    | `"fail"`             | Client-side errors.                             |
+| 5xx                    | `"error"`            | Server-side errors.                             |
 
 You can specify a custom formatter when creating `DefaultHandlers`:
 
@@ -200,7 +200,7 @@ onComplete(output: unknown, conn: Conn): Promise<void> | void {
 
 #### `onPostResponse(data: unknown, conn: Conn)`
 
-Called _after_ a response has been sent (headers already sent). It is primarily used for logging or cleanup.. The default implementation logs the response data.
+Called _after_ a response has been sent (headers already sent). It is primarily used for logging or cleanup. The default implementation logs the response data.
 
 ```typescript
 onPostResponse(data: unknown, conn: Conn): Promise<void> | void {

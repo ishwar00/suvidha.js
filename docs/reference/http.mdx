@@ -131,8 +131,8 @@ export class End {
 #### `Http.Ok` (200 OK)
 
 - **Description:** Represents a successful 200 OK response.
-- **Usage:** `Http.Ok.body(body)`
-- **Example:** `return Http.Ok.body({ data: result });`
+- **Usage:** `Http.Ok.body(body)`.
+- **Example:** `return Http.Ok.body({ data: result });`.
 
 ```typescript [expandable]
 /**
@@ -161,7 +161,7 @@ export class Ok extends End {
 
 - **Description:** Represents a 400 Bad Request response.
 - **Usage:** `throw new Http.BadRequest.body(body)` or `throw new Http.BadRequest()` (for default message).
-- **Example:** `throw new Http.BadRequest.body({ error: "Invalid input" });` or `throw new Http.BadRequest();` (sends "Bad Request")
+- **Example:** `throw new Http.BadRequest.body({ error: "Invalid input" });` or `throw new Http.BadRequest();` (sends "Bad Request").
 
 ```typescript [expandable]
 /**

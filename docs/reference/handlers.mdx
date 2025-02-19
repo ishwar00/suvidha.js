@@ -8,7 +8,7 @@ They handle validation, responses, and more.
 
 All handlers receive a `Conn` object, which contains the following:
 
-- `req`: An extended Express `Request` object, which includes the `context`
+- `req`: An extended Express `Request` object, which includes the `context`.
   property for accessing request-specific data added by middlewares.
 - `res`: The standard Express `Response` object.
 
@@ -122,7 +122,7 @@ interface Handlers {
 
 **Arguments:**
 
-- `err`: This can be of any type, depending on what caused the error..
+- `err`: This can be of any type, depending on what caused the error.
 - `conn`: The `Conn` object containing the request and response objects.
 - `next`: The Express `next` function.
 

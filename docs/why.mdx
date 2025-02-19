@@ -33,7 +33,7 @@ Let's take a look at the typical flow of request and response handling.
 
 Below is an example implementation of it in express.js.
 
-> I have tried to keep it simple
+> I have tried to keep it simple.
 
 <Tabs>
 
@@ -138,8 +138,8 @@ export type BookDto = z.infer<typeof BookSchema>;
 
 Popular solutions:
 
-- [`asyncHandler()`](https://www.google.com/search?q=async+handler) to avoid `try-catch` boilerplate
-- [extend](https://www.google.com/search?q=how+to+add+user+info+to+express+request) Express' Request interface globally to add `user`
+- [`asyncHandler()`](https://www.google.com/search?q=async+handler) to avoid `try-catch` boilerplate.
+- [extend](https://www.google.com/search?q=how+to+add+user+info+to+express+request) Express' Request interface globally to add `user`.
 
 It's patchwork to add `user` property to `Request` interface globally.
 Types are not inferred by typescript, middlewares and request handlers act independently,
