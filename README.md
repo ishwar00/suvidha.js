@@ -151,7 +151,7 @@ export type UserDTO = z.infer<typeof UserSchema>;
 
 ```json
 {
-    "statusCode": 201,
+    "status": "success",
     "data": {
         "id": "67adc39ea1ff4e9d60273236"
     }
