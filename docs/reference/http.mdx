@@ -3,18 +3,19 @@ title: "Http Classes"
 icon: "file-code"
 ---
 
-Suvidha's `Http` classes simplify responses. Default handlers support them _and_ plain `Protocol` objects. If you write your own handlers, you need to support these if you want to use them.
+Suvidha's `Http` classes simplify handling responses. The default handlers support both `Http` classes and plain `Protocol` objects.
+If you write your own handlers, you must support these classes to use them effectively.
 
 ### The `Protocol` Type
 
-Response structure.
+Response structure:
 
 ```typescript
 /**
  * @typedef {object} Protocol
  * @property {any} body - The response body. This can be a string, an object, or any other data you want to send in the response.
  * @property {number} status - The HTTP status code (e.g. 200).
- * @property {Headers} [headers] - Optional response headers.  A record where keys are header names and values are header values.
+ * @property {Headers} [headers] - Optional response headers.  A record where the keys are header names and the values are their corresponding header values.
  * @property {Meta} [meta] - Optional metadata associated with the response.
  */
 export interface Protocol {
@@ -44,7 +45,7 @@ throw new Http.Unauthorized(); // Sends a 401 with the default "Unauthorized" me
 
 ### The `Http.End` Class (Base Class)
 
-This is the foundation for all the other Http classes.
+This serves as the foundation for all other Http classes.
 
 ```typescript [expandable]
 /**
@@ -164,7 +165,7 @@ export class Ok extends End {
 
 ```typescript [expandable]
 /**
- * Represents a 400 Bad Request response.  Has a default body message.
+ * Represents a 400 Bad Request response. Includes a default body message.
  */
 export class BadRequest extends End {
     /**
@@ -185,11 +186,11 @@ export class BadRequest extends End {
 }
 ```
 
-other class follow the same pattern.
+Other classes follow the same pattern.
 
 ### Error Handling with `Http` Classes
 
-You can throw instances of the appropriate `Http` error class.
+You can throw an instance of the appropriate `Http` error class.
 
 ```typescript
 // Example:
@@ -204,7 +205,7 @@ if (/* another error condition */) {
 
 ### Simple Alternative
 
-Return plain `Protocol` objects if preferred:
+You can return plain `Protocol` objects if preferred:
 
 ```typescript
 return {
@@ -217,6 +218,6 @@ return {
 
 <Warning>
     {" "}
-    Don't throw plain `Protocol` objects, they are not processed by
-    `DefaultHandlers`'s `onErr` handler. Use `Http` classes instead.{" "}
+    Do not throw plain `Protocol` objects, as they are not processed by the
+    `onErr` handler in `DefaultHandlers`.
 </Warning>

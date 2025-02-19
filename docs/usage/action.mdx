@@ -6,11 +6,11 @@ icon: "code"
 
 ## Using and Extending Suvidha's Default Handlers
 
-Suvidha's default handlers offer a quick start for request/response management. They handle common tasks and are easily extended.
+Suvidha's default handlers offer a quick start for request/response management. They handle common tasks and can be easily extended.
 
 ### Introduction
 
-Default handlers provide a pre-configured setup. They handle response formatting, errors, and successful requests, letting you focus on your logic. They're ready to use but also customizable.
+Default handlers provide a pre-configured setup. They handle response formatting, errors, and successful requests, allowing you to focus on your logic.. They're ready to use yet customizable.
 
 ### Basic Usage
 
@@ -45,7 +45,7 @@ Default handlers are created with `new DefaultHandlers()`. `suvidha()` uses them
 
 ### Extending
 
-Extend default handlers for custom behavior. Create a class inheriting from `DefaultHandlers` and override methods.
+Extend the default handlers to customize behavior. Create a class that inherits from DefaultHandlers and overrides its methods.
 
 ```typescript
 import { Handlers, Conn } from "suvidha";
@@ -258,7 +258,7 @@ class MyHandlers extends DefaultHandlers {
 
 #### Middleware Integration
 
-Use Suvidha's `.use()` method for middleware. This preserves type safety and allows context propagation.
+Use Suvidha's .use() method for middleware, which preserves type safety and allows context propagation.
 
 ```typescript
 import { Suvidha, DefaultHandlers, Http } from "suvidha";

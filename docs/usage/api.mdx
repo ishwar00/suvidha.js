@@ -17,7 +17,7 @@ icon: "plug"
 
 # Core API Methods
 
-`use` middlewares receive a `Conn` object, which contains.
+`use` middlewares receive a `Conn` object, which contains:
 
 - `req`: An extended Express `Request` object, which includes the `context`
   property for accessing request-specific data added by middlewares.
@@ -37,7 +37,7 @@ export type Conn<T extends Context, ...> = {
 
 <AccordionGroup>
 <Accordion title="Suvidha(handlers: Handlers)" icon="code">
-main class to create a new instance of Suvidha, requires `Handlers` instance.
+Main class for creating a new instance of Suvidha; requires a Handlers instance.
 
 ```ts
 constructor(handlers: Handlers);
@@ -47,7 +47,7 @@ constructor(handlers: Handlers);
 
 <Accordion title="Handlers" icon="code">
 
-interface to define handlers for `onSchemaErr`, `onComplete`, `onPostResponse` and `onErr`.
+Interface for defining handlers for `onSchemaErr`, `onComplete`, `onPostResponse`, and `onErr`.
 
 ```ts
 interface Handlers {
@@ -78,7 +78,7 @@ Refer to [Handlers](/reference/handlers) for more details.
 
 ### Purpose
 
-Validate and type the request body using Zod schemas
+Validates and types the request body using Zod schemas
 
 ### Parameters
 
@@ -107,7 +107,7 @@ suvidha().body(
 
 ### Purpose
 
-Validate and type URL path parameters
+Validates and types URL path parameters.
 
 ### Example
 
@@ -134,7 +134,7 @@ handler((req) => {
 
 ### Purpose
 
-Validate and type query string parameters
+Validates and types query string parameters.
 
 ### Example
 
@@ -164,14 +164,14 @@ Builds request context through chainable middleware. Each call merges new proper
 Any exceptions thrown will be handled by `onErr` handler.
 
 <AccordionGroup> <Accordion title="Key Characteristics" icon="key">
-- **Order-Sensitive**: Middleware executes in declaration order
+- **Order-Sensitive**: Middleware executes in the order of declaration.
 - **Type Accumulation**: Each middleware's return type merges with previous context
 - **Immutable Context**: Each middleware gets current context in `Readonly` wrapper to prevent mutations
 - **Early Termination**: Middleware can end response with `conn.res.send()`
 
 </Accordion> </AccordionGroup>
 
-<Note> Merging is same as `...` spread operator, `new_ctx = { ...current_ctx, ...ctx }` </Note>
+<Note>Merging is the same as using the ... spread operator, `new_ctx = { ...current_ctx, ...ctx }` </Note>
 
 ### Middleware Signature
 
@@ -204,7 +204,7 @@ req.context.permissions; // string[]
 
 ### Purpose
 
-Define final request handler with full type safety.
+Defines the final request handler with full type safety.
 
 ### Signature
 
@@ -231,7 +231,7 @@ Define final request handler with full type safety.
 </AccordionGroup>
 
 <Note> 
-Execution order of middlewares is same as declaration order
+The execution order of middlewares is the same as the order of declaration.
 
 ```ts
 app.get(
@@ -280,7 +280,7 @@ app.post(
 middlewares take `Conn` as input and return `Context | Promise<Context>`.
 
 ```ts
-// If middleware expects `{ user: User }` in context,
+// Middleware expects { user: User } in the context.
 // specify the constraint in type signature, that way
 // Suvidha will ensure that middleware is called
 // only when expected context data is available
@@ -325,8 +325,8 @@ app.get(
 );
 ```
 
-Typescript will throw an error, since `middleware` expects `{ user: User }` in context,
-but context is `{}` as `authenticate` middleware is not called yet.
+TypeScript will throw an error because `middleware` expects `{ user: User }` in context,
+but the context is `{}` because the `authenticate` middleware has not been called yet.
 
 ```text typescript error [2345]
 Property 'user' is missing in type '{}' but required in type 'ExpectedContext'.
@@ -359,7 +359,7 @@ Reorder middlewares → Type error ← Context dependencies broken.
 
 ## Loosely Coupled Business Logic
 
-Handle responses using `onComplete` and `onErr` when using `Suvidha` with `Handlers`.
+Handles responses using `onComplete` and `onErr` when using `Suvidha` with `Handlers`.
 This separates your core business logic from framework-specific response methods, keeping your code cleaner by delegating response handling to the handlers.
 
 ```ts
@@ -443,7 +443,7 @@ app.post(
 
 ## DRY Suvidha
 
-If you have common middlewares accross multiple routes, you can create a `Suvidha` instance and reuse it.
+If you have common middlewares across multiple routes, you can create a `Suvidha` instance and reuse it.
 
 ```ts {8, 17, 29, 39}
 import { Suvidha, DefaultHandlers, Http } from "suvidha";
@@ -494,8 +494,8 @@ app.get(
 
 ## Adopting Suvidha in Existing Projects
 
-Suvidha's `CtxRequest` extends the standard `Request` object with a `context` property.  
-Existing handlers that accept `Request` will also work with `CtxRequest`. Access the context using `CtxRequest`.
+Suvidha's `CtxRequest` extends the standard `Request` object by adding a `context` property.
+Existing handlers that accept `Request` will also work with `CtxRequest`. The `context` can be accessed using `CtxRequest`.
 
 <CodeGroup>
 
