@@ -6,11 +6,11 @@ icon: "code"
 
 ## Using and Extending Suvidha's Default Handlers
 
-Suvidha's default handlers offer a quick start for request/response management. They handle common tasks and are easily extended.
+Suvidha's default handlers offer a quick start for request/response management. They handle common tasks and can be easily extended.
 
 ### Introduction
 
-Default handlers provide a pre-configured setup. They handle response formatting, errors, and successful requests, letting you focus on your logic. They're ready to use but also customizable.
+Default handlers provide a pre-configured setup. They handle response formatting, errors, and successful requests, allowing you to focus on your logic.. They're ready to use yet customizable.
 
 ### Basic Usage
 
@@ -25,7 +25,7 @@ const suvidha = () => Suvidha.create(new DefaultHandlers());
 
 app.get(
     "/hello",
-    suvidha().handler(async (req) => {
+    suvidha().handler(() => {
         return Http.Ok.body({ message: "Hello, world!" });
     }),
 );
@@ -33,7 +33,7 @@ app.get(
 // Example using a plain Protocol object:
 app.get(
     "/simple",
-    suvidha().handler(async (req) => {
+    suvidha().handler(() => {
         return { status: 200, body: { message: "This is simple." } };
     }),
 );
@@ -45,7 +45,7 @@ Default handlers are created with `new DefaultHandlers()`. `suvidha()` uses them
 
 ### Extending
 
-Extend default handlers for custom behavior. Create a class inheriting from `DefaultHandlers` and override methods.
+Extend the default handlers to customize behavior. Create a class that inherits from DefaultHandlers and overrides its methods.
 
 ```typescript
 import { Handlers, Conn } from "suvidha";
@@ -75,13 +75,13 @@ export class SimpleCustomHandlers extends DefaultHandlers implements Handlers {
 
 **User Profile Endpoint with `SimpleCustomHandlers`**
 
-```typescript Implementation
+```typescript
 app.get(
     "/users/:id",
     Suvidha.create(new SimpleCustomHandlers())
         .params(z.object({ id: z.string().uuid() }))
-        .use(async (conn) => {
-            const user = await getUser(conn.req.params.id);
+        .use(async ({ req }) => {
+            const user = await getUser(req.params.id);
             if (!user) throw Http.NotFound.body("User not found");
             return { user };
         })
@@ -100,7 +100,7 @@ app.get(
 <Tabs>
 <Tab title="Successful Response">
 
-```json 200 OK
+```json
 {
     "status": "success",
     "data": {
@@ -122,7 +122,7 @@ X-API-Version: 2.0
 </Tab>
 <Tab title="Error Response">
 
-```json 500 Internal Server Error
+```json
 {
     "error": "Something went wrong",
     "reference": "k7gfy2"
@@ -145,7 +145,7 @@ Override `onComplete` or `onErr`.
 
 ```typescript
 class MyHandlers extends DefaultHandlers {
-    onComplete(
+    override onComplete(
         output: unknown,
         conn: Conn,
         next: NextFunction,
@@ -156,7 +156,11 @@ class MyHandlers extends DefaultHandlers {
         return super.onComplete(output, conn, next);
     }
 
-    onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+    override onErr(
+        err: unknown,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void {
         console.error(`Error: ${err}, URL: ${conn.req.originalUrl}`);
         return super.onErr(err, conn, next);
     }
@@ -169,7 +173,7 @@ Override `onComplete` or `onErr`.
 
 ```typescript
 class MyHandlers extends DefaultHandlers {
-    onComplete(
+    override onComplete(
         output: unknown,
         conn: Conn,
         next: NextFunction,
@@ -189,7 +193,11 @@ Suvidha handlers receive the `next` function, allowing you to pass errors to Exp
 import { DefaultHandlers, Conn, Http } from "suvidha";
 
 class MyHandlers extends DefaultHandlers {
-    onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+    override onErr(
+        err: unknown,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void {
         if (err instanceof Http.End) {
             return super.onErr(err, conn, next); // Default Suvidha error handling
         }
@@ -207,14 +215,20 @@ Override `onErr`.
 import { Http } from "suvidha"; // Import Http
 
 class MyHandlers extends DefaultHandlers {
-    onErr(err: unknown, conn: Conn, next: NextFunction): Promise<void> | void {
+    override onErr(
+        err: unknown,
+        conn: Conn,
+        next: NextFunction,
+    ): Promise<void> | void {
         if (err instanceof Http.NotFound) {
-            return conn.res.status(404).send({ error: "Resource not found" });
+            return void conn.res
+                .status(404)
+                .send({ error: "Resource not found" });
         } else if (
             err instanceof Error &&
             err.message.includes("Database Error")
         ) {
-            return conn.res
+            return void conn.res
                 .status(500)
                 .send({ error: "Database error occurred." });
         }
@@ -244,7 +258,7 @@ class MyHandlers extends DefaultHandlers {
 
 #### Middleware Integration
 
-Use Suvidha's `.use()` method for middleware. This preserves type safety and allows context propagation.
+Use Suvidha's .use() method for middleware, which preserves type safety and allows context propagation.
 
 ```typescript
 import { Suvidha, DefaultHandlers, Http } from "suvidha";
@@ -255,21 +269,21 @@ interface User {
     role: string;
 }
 
-declare function authenticate(req: any): Promise<User>;
+declare function authenticate(req: Request): Promise<User>;
 
 const suvidha = () => Suvidha.create(new DefaultHandlers());
 
 const auth = () =>
-    suvidha().use(async (conn) => {
-        const user = await authenticate(conn.req).catch((_) => {
+    suvidha().use(async ({ req }) => {
+        const user = await authenticate(req).catch((_) => {
             throw new Http.Unauthorized();
         });
         return { user };
     });
 
 const adminOnly = () =>
-    auth().use(async (conn) => {
-        if (conn.req.context.user.role !== "admin") {
+    auth().use(async ({ req }) => {
+        if (req.context.user.role !== "admin") {
             throw new Http.Forbidden();
         }
         return {};
@@ -286,7 +300,7 @@ app.post(
     "/users",
     auth()
         .body(userSchema)
-        .handler(async (req) => {
+        .handler((req) => {
             const user = req.body;
             return createUser(user);
         }),
@@ -301,7 +315,7 @@ app.get(
     "/users",
     auth()
         .query(pageSchema)
-        .handler(async (req) => {
+        .handler((req) => {
             const { page, limit } = req.query;
             return Http.Ok.body({ page, limit });
         }),

@@ -6,15 +6,15 @@ icon: "gear"
 Suvidha handlers are essential for customizing request processing.
 They handle validation, responses, and more.
 
-All handlers receive a `Conn` object, which contains.
+All handlers receive a `Conn` object, which contains the following:
 
-- `req`: An extended Express `Request` object, which includes the `context`
+- `req`: An extended Express `Request` object, which includes the `context`.
   property for accessing request-specific data added by middlewares.
 - `res`: The standard Express `Response` object.
 
 ```ts
 /**
- * CtxRequest adds context to the Request object
+ * CtxRequest adds context to the Express' Request object
  * CtxRequest<Context, Params, ResBody, ReqBody, ReqQuery>,
  * Request<            Params, ResBody, ReqBody, ReqQuery>
  */
@@ -30,7 +30,7 @@ class Suvidha {
 }
 ```
 
-`Suvidha` constructor takes any object that implements `Handlers` interface, which is defined as follows:
+The `Suvidha` constructor takes any object that implements the `Handlers` interface, which is defined as follows:
 
 ```ts
 export interface Handlers {
@@ -73,13 +73,13 @@ interface Handlers {
 
 **Responsibilities:**
 
-- Handle Zod schema validation failures gracefully.
-- Typically send an appropriate error response
-- Can call `next(err)` to offload error handling to Express's default error handler or other middleware.
+- Handles Zod schema validation failures gracefully.
+- Typically sends an appropriate error response.
+- It can call `next(err)` to delegate error handling to Express's default error handler or other middleware.
 
 **Trigger Conditions:**
 
-- Called when a Zod schema validation fails (e.g., request body, query parameters, or path parameters do not match the defined schema).
+- This is called when a Zod schema validation fails (e.g., when the request body, query parameters, or path parameters do not match the defined schema).
 
 **Arguments:**
 
@@ -122,7 +122,7 @@ interface Handlers {
 
 **Arguments:**
 
-- `err`: The error object. This can be of any type, depending on what threw the error.
+- `err`: This can be of any type, depending on what caused the error.
 - `conn`: The `Conn` object containing the request and response objects.
 - `next`: The Express `next` function.
 
@@ -156,12 +156,12 @@ interface Handlers {
 
 **Responsibilities:**
 
-- Handle the successful completion of the request handler function when a response has _not_ already been sent.
+- Handles the successful completion of the request handler function when a response has not already been sent.
 - Typically send the successful response based on the `output` from the request handler.
 
 **Trigger Conditions:**
 
-- Called when the request handler function executes successfully _and_ no part of the response (headers or body) has been sent yet.
+- This is called when the request handler function executes successfully and no part of the response (headers or body) has been sent yet.
 
 **Arguments:**
 
@@ -198,18 +198,19 @@ interface Handlers {
 
 **Responsibilities:**
 
-- Handle anything that happens _after_ a response has been initiated (headers sent). This includes both errors and returned values.
+- Handles anything that happens after a response has been initiated (headers sent). This includes both errors and returned values.
 - Log errors that occur after the response has begun.
-- Handle the (usually unintentional) scenario where the request handler returns a value after sending a response.
+- Handles the (usually unintentional) scenario where the request handler returns a value after sending a response.
 
 **Trigger Conditions:**
 
 <Note>
-    `res.send()`, `res.json()` any method that sends the headers or body is
-    considered equivalent and considered initiating the response.
+    Methods such as `res.send()` and `res.json()`, or any other method that
+    sends headers or a body, are considered equivalent and indicate that the
+    response has been initiated.
 </Note>
 
-- Called when something happens _after_ a response has started (headers sent).  
+- This is called when something happens after a response has started (headers sent).
   This can be:
     - Errors thrown by middleware _after_ using `conn.res.send()`.
     - Errors thrown by the request handler _after_ using `res.send()`.
@@ -224,7 +225,7 @@ interface Handlers {
 It's important to note:
 
 - If the request handler throws an error _before_ sending a response, `onErr` is called, _not_ `onPostResponse`.
-- If middleware sends a response, the request handler is not executed. Any errors thrown by the middleware _after_ sending the response are caught by `onPostResponse`.
+- If middleware sends a response, the request handler will not be executed. Any errors thrown by the middleware _after_ sending the response are caught by `onPostResponse`.
 
 Example implementation:
 
@@ -250,7 +251,7 @@ class CustomHandlers implements Handlers {
 </Accordion>
 </AccordionGroup>
 
-**Exmaple Implementation**
+**Example Implementation**
 
 ```ts
 class CustomHandlers implements Handlers {
@@ -284,7 +285,7 @@ class CustomHandlers implements Handlers {
     }
 }
 
-// creating a suvidha instance with custom handlers
+// Creating a Suvidha instance with custom handlers
 const suvidha = () => new Suvidha(new CustomHandlers());
 
 app.get(

@@ -4,13 +4,13 @@ icon: "box"
 ---
 
 Suvidha provides default handlers that manage the request/response lifecycle.
-These handlers support the `Http` classes and plain `Protocol` objects for responses.
-You can customize the _response body_ format using a formatter function.
+These handlers support `Http` classes and plain `Protocol` objects for responses.
+You can customize the format of the _response body_ using a formatter function.
 
 ### The `Formatter` Function
 
 The `Formatter` function is used to structure the final HTTP _response body_.
-It takes the status code, body, and metadata as arguments and returns the formatted _response body_.
+It takes the status code, body, and metadata as arguments, and returns the formatted _response body_.
 
 ```typescript
 export type Formatter = (status: number, body: unknown, meta?: Meta) => any;
@@ -20,7 +20,7 @@ Suvidha provides a default formatter:
 
 ```typescript [expandable]
 export const defaultFormatter: Formatter = (status, body, meta) => {
-    const mapToStatus = (statusCode: number): ResonseFormat["status"] => {
+    const mapToStatus = (statusCode: number) => {
         if (statusCode >= 400 && statusCode < 500) {
             // Client error
             return "fail";
@@ -40,19 +40,19 @@ export const defaultFormatter: Formatter = (status, body, meta) => {
 };
 ```
 
-The default formatter creates a `{ status, data, meta }` object, mapping HTTP status codes:
+The default formatter creates a `{ status, data, meta }` object that maps HTTP status codes.
 
-| HTTP Status Code Range | `status` Field Value | Description                                    |
-| ---------------------- | -------------------- | ---------------------------------------------- |
-| 1xx\, 2xx\, 3xx        | `"success"`          | Successful requests or informational responses |
-| 4xx                    | `"fail"`             | Client-side errors                             |
-| 5xx                    | `"error"`            | Server-side errors                             |
+| HTTP Status Code Range | `status` Field Value | Description                                     |
+| ---------------------- | -------------------- | ----------------------------------------------- |
+| 1xx\, 2xx\, 3xx        | `"success"`          | Successful requests or informational responses. |
+| 4xx                    | `"fail"`             | Client-side errors.                             |
+| 5xx                    | `"error"`            | Server-side errors.                             |
 
-You can provide a custom formatter when creating `DefaultHandlers`:
+You can specify a custom formatter when creating `DefaultHandlers`:
 
 ```typescript
 const myFormatter: Formatter = (status, body, meta) => {
-    const isDev = process.env.NODE_ENV === "development";
+    const isDev = process.env["NODE_ENV"] === "development";
     // This will be 'body' of the response
     return {
         data: body,
@@ -67,7 +67,7 @@ const handlers = new DefaultHandlers(myFormatter);
 
 The `DefaultHandlers` class implements the `Handlers` interface and provides default
 implementations for handling errors, schema errors, successful responses, and post-response actions.
-Sets `Content-Type` to `application/json` by default.
+It sets the `Content-Type` to `application/json` by default.
 
 ```typescript [expandable]
 export class DefaultHandlers implements Handlers {
@@ -91,8 +91,8 @@ export class DefaultHandlers implements Handlers {
     onErr(err: unknown, conn: Conn): Promise<void> | void {
         if (err instanceof Http.End) {
             const statusCode = err.getStatus();
-
             this.setHeaders(conn, err.getHeaders());
+
             return void conn.res
                 .status(statusCode)
                 .send(this.fmt(statusCode, err.getBody(), err.getMeta()));
@@ -149,7 +149,7 @@ export class DefaultHandlers implements Handlers {
     }
 
     onPostResponse(data: unknown, _: Conn): Promise<void> | void {
-        console.log(
+        console.warn(
             `Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`,
         );
     }
@@ -161,7 +161,7 @@ export class DefaultHandlers implements Handlers {
 Handles errors.
 
 - If `err` is an `Http.End` instance, it sends the response with the specified status code, headers, and body (formatted by the formatter).
-- Otherwise, it sends a 500 Internal Server Error response with the default message.
+- Otherwise, it sends a 500 Internal Server Error response with a default message.
 
 ```typescript
 onErr(err: unknown, conn: Conn): Promise<void> | void {
@@ -175,7 +175,7 @@ onErr(err: unknown, conn: Conn): Promise<void> | void {
 
 #### `onSchemaErr(err: ZodError, conn: Conn, next: NextFunction)`
 
-Handles schema validation errors (using Zod). It always throws a `Http.BadRequest` error with a default message.
+Handles schema validation errors using Zod. It always throws an `Http.BadRequest` error with a default message.
 
 ```typescript
 onSchemaErr(err: ZodError, conn: Conn, next: NextFunction): Promise<void> | void {
@@ -200,10 +200,10 @@ onComplete(output: unknown, conn: Conn): Promise<void> | void {
 
 #### `onPostResponse(data: unknown, conn: Conn)`
 
-Called _after_ a response has been sent (headers already sent). Primarily used for logging or cleanup. The default implementation logs the response data.
+Called _after_ a response has been sent (headers already sent). It is primarily used for logging or cleanup. The default implementation logs the response data.
 
 ```typescript
 onPostResponse(data: unknown, conn: Conn): Promise<void> | void {
-    console.log(`Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`);
+    console.warn(`Suvidha(onPostResponse): ${util.inspect(data, { depth: 10 })}`);
 }
 ```

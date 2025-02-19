@@ -4,9 +4,9 @@ description: "Building type-safe Express APIs without boilerplate"
 icon: "puzzle-piece"
 ---
 
-Suvidha is designed for type safety and better developer experience with Express.js.
+Suvidha is designed for type safety and an improved developer experience with Express.js.
 
-Let's take a look at the typical flow of a request and response handling.
+Let's take a look at the typical flow of request and response handling.
 
 <Steps>
     <Step title="Authentication" icon="shield-check">
@@ -31,7 +31,9 @@ Let's take a look at the typical flow of a request and response handling.
 
 </Steps>
 
-Below is an **usual** example implementation of it in express.js.
+Below is an example implementation of it in express.js.
+
+> I have tried to keep it simple.
 
 <Tabs>
 
@@ -42,7 +44,7 @@ app.post(
     "/books",
     authenticate,
     authorize,
-    (req) => validateBody(req, BookSchema),
+    (req, res) => validateBody(req, res, BookSchema),
     async function (req, res) {
         // Instead of `try-catch` usually we use "asyncHandler()"
         try {
@@ -84,7 +86,7 @@ async function authorize(req: Request, res: Response, next: NextFunction) {
     next();
 }
 
-function validateBody(req: Request, zodSchema: ZodType<any>) {
+function validateBody(req: Request, res: Response, zodSchema: ZodType<any>) {
   try {
     req.body = zodSchema.parse(req.body);
     next();
@@ -136,8 +138,8 @@ export type BookDto = z.infer<typeof BookSchema>;
 
 Popular solutions:
 
-- [`asyncHandler()`](https://www.google.com/search?q=async+handler) to avoid `try-catch` boilerplate
-- [extend](https://www.google.com/search?q=how+to+add+user+info+to+express+request) Express' Request interface globally to add `user`
+- [`asyncHandler()`](https://www.google.com/search?q=async+handler) to avoid `try-catch` boilerplate.
+- [extend](https://www.google.com/search?q=how+to+add+user+info+to+express+request) Express' Request interface globally to add `user`.
 
 It's patchwork to add `user` property to `Request` interface globally.
 Types are not inferred by typescript, middlewares and request handlers act independently,
@@ -156,9 +158,9 @@ Re-writing the above example using Suvidha:
 app.post(
     "/books",
     suvidha()
-        .body(BookSchema)
         .use(authenticate)
         .use(authorize)
+        .body(BookSchema)
         .handler(async (req, _res) => {
             const { user } = req.context; // type of user: { role: string, name: string }
             const book = req.body; // type of book: { name: string, author: string }
@@ -238,13 +240,13 @@ To understand how `Suvidha` facilitates this, let's look at the flow.
 
 #### Flow
 
-Lines are highlighted wherever the `Handlers` are called incluing request handler.
+Lines are highlighted wherever the `Handlers`, `use` middlewares are called including request handler.
 
 <Tabs>
 
 <Tab title="ascii">
 
-```ascii [expandable] {19, 34, 39, 41, 52, 54}
+```ascii [expandable] {19, 25, 34, 39, 41, 52, 54}
 Start Request]
     |
     v

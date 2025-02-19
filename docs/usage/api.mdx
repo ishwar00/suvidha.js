@@ -17,9 +17,27 @@ icon: "plug"
 
 # Core API Methods
 
+`use` middlewares receive a `Conn` object, which contains:
+
+- `req`: An extended Express `Request` object, which includes the `context`
+  property for accessing request-specific data added by middlewares.
+- `res`: The standard Express `Response` object.
+
+```ts
+/**
+ * CtxRequest adds context to the Express' Request object
+ * CtxRequest<Context, Params, ResBody, ReqBody, ReqQuery>,
+ * Request<            Params, ResBody, ReqBody, ReqQuery>
+ */
+export type Conn<T extends Context, ...> = {
+    req: CtxRequest<T, ...>;
+    res: Response;
+};
+```
+
 <AccordionGroup>
 <Accordion title="Suvidha(handlers: Handlers)" icon="code">
-main class to create a new instance of Suvidha, requires `Handlers` instance.
+Main class for creating a new instance of Suvidha; requires a Handlers instance.
 
 ```ts
 constructor(handlers: Handlers);
@@ -29,7 +47,7 @@ constructor(handlers: Handlers);
 
 <Accordion title="Handlers" icon="code">
 
-interface to define handlers for `onSchemaErr`, `onComplete`, `onPostResponse` and `onErr`.
+Interface for defining handlers for `onSchemaErr`, `onComplete`, `onPostResponse`, and `onErr`.
 
 ```ts
 interface Handlers {
@@ -60,17 +78,17 @@ Refer to [Handlers](/reference/handlers) for more details.
 
 ### Purpose
 
-Validate and type the request body using Zod schemas
+Validates and types the request body using Zod schemas.
 
 ### Parameters
 
-- `schema`: Zod schema definition
-- Returns: Chainable Suvidha instance
+- `schema`: Zod schema definition.
+- Returns: Chainable Suvidha instance.
 
 ### Example
 
 ```ts
-Suvidha.create().body(
+suvidha().body(
     z.object({
         email: z.string().email(),
         password: z.string().min(8),
@@ -80,8 +98,8 @@ Suvidha.create().body(
 
 ### Behavior
 
-- Validates request body before middleware/handler execution
-- Overrides default `any` type with schema inference
+- Validates request body before handler execution.
+- Overrides default `any` type with schema inference.
 
 </Accordion>
 
@@ -89,15 +107,17 @@ Suvidha.create().body(
 
 ### Purpose
 
-Validate and type URL path parameters
+Validates and types URL path parameters.
 
 ### Example
 
 ```ts
-.params(z.object({
-  userId: z.string().uuid(),
-  postId: z.coerce.number()
-}))
+suvidha().params(
+    z.object({
+        userId: z.string().uuid(),
+        postId: z.coerce.number(),
+    }),
+);
 ```
 
 ### Access in Handler
@@ -114,15 +134,17 @@ handler((req) => {
 
 ### Purpose
 
-Validate and type query string parameters
+Validates and types query string parameters.
 
 ### Example
 
 ```ts
-.query(z.object({
-  page: z.number().default(1),
-  sort: z.enum(['asc', 'desc'])
-}))
+suvidha().query(
+    z.object({
+        page: z.number().default(1),
+        sort: z.enum(["asc", "desc"]),
+    }),
+);
 ```
 
 ### Default Values
@@ -142,14 +164,14 @@ Builds request context through chainable middleware. Each call merges new proper
 Any exceptions thrown will be handled by `onErr` handler.
 
 <AccordionGroup> <Accordion title="Key Characteristics" icon="key">
-- **Order-Sensitive**: Middleware executes in declaration order
-- **Type Accumulation**: Each middleware's return type merges with previous context
-- **Immutable Context**: Each middleware gets current context in `Readonly` wrapper to prevent mutations
-- **Early Termination**: Middleware can end response with `conn.res.send()`
+- **Order-Sensitive**: Middleware executes in the order of declaration.
+- **Type Accumulation**: Each middleware's return type merges with previous context.
+- **Immutable Context**: Each middleware gets current context in `Readonly` wrapper to prevent mutations.
+- **Early Termination**: Middleware can end response with `conn.res.send()`.
 
 </Accordion> </AccordionGroup>
 
-<Note> Merging is same as `...` spread operator, `new_ctx = { ...current_ctx, ...ctx }` </Note>
+<Note>Merging is the same as using the ... spread operator, `new_ctx = { ...current_ctx, ...ctx }` </Note>
 
 ### Middleware Signature
 
@@ -182,7 +204,7 @@ req.context.permissions; // string[]
 
 ### Purpose
 
-Define final request handler with full type safety.
+Defines the final request handler with full type safety.
 
 ### Signature
 
@@ -194,22 +216,22 @@ Define final request handler with full type safety.
 
 ### Parameters
 
-- `req` is express' `Request` object with added context
-- `res` is express' `Request` object
-- `next` is express' `NextFunction` to call next middleware
+- `req` is express' `Request` object with added context.
+- `res` is express' `Request` object.
+- `next` is express' `NextFunction` to call next middleware.
 
 ### Return Handling
 
-| Return Type                  | Behavior                                                |
-| ---------------------------- | ------------------------------------------------------- |
-| `undefined`                  | Must call `res.send()` manually to send the response    |
-| `Http.End` \| `Other Values` | Processed by `onComplete` handler (If headers not sent) |
+| Return Type                  | Behavior                                                 |
+| ---------------------------- | -------------------------------------------------------- |
+| `undefined`                  | Must call `res.send()` manually to send the response.    |
+| `Http.End` \| `Other Values` | Processed by `onComplete` handler (If headers not sent). |
 
 </Accordion>
 </AccordionGroup>
 
 <Note> 
-Execution order of middlewares is same as declaration order
+The execution order of middlewares is the same as the order of declaration.
 
 ```ts
 app.get(
@@ -225,7 +247,7 @@ app.get(
 );
 ```
 
-Execution order is `query` -> `middyA` -> `middyB` -> `body` -> `handler`
+Execution order is `query` -> `middyA` -> `middyB` -> `params` -> `handler`.
 
 </Note>
 
@@ -258,9 +280,10 @@ app.post(
 middlewares take `Conn` as input and return `Context | Promise<Context>`.
 
 ```ts
-// If middleware expects `{ user: User }` in context,
+// Middleware expects { user: User } in the context.
 // specify the constraint in type signature, that way
-// Suvidha will ensure that middleware is called in the correct order.
+// Suvidha will ensure that middleware is called
+// only when expected context data is available.
 type ExpectedContext = { user: User };
 
 const middleware = (conn: Conn<ExpectedContext>) => {
@@ -302,8 +325,8 @@ app.get(
 );
 ```
 
-Typescript will throw an error, since `middleware` expects `{ user: User }` in context,
-but context is `{}` as `authenticate` middleware is not called yet.
+TypeScript will throw an error because `middleware` expects `{ user: User }` in context,
+but the context is `{}` because the `authenticate` middleware has not been called yet.
 
 ```text typescript error [2345]
 Property 'user' is missing in type '{}' but required in type 'ExpectedContext'.
@@ -320,13 +343,13 @@ app.get(
     "/reports",
     suvidha()
         .use(() => ({ auth: getAuth() })) // { auth: Auth }
-        .use((conn) => ({
+        .use(({ req }) => ({
             // Requires previous auth
-            user: getUser(conn.context.auth), // + { user: User }
+            user: getUser(req.context.auth), // + { user: User }
         }))
-        .use(async (conn) => ({
+        .use(async ({ req }) => ({
             // Requires user
-            report: await fetchReport(conn.context.user), // + { report: Report }
+            report: await fetchReport(req.context.user), // + { report: Report }
         }))
         .handler((req) => req.context.report), // Final: auth + user + report
 );
@@ -336,7 +359,7 @@ Reorder middlewares → Type error ← Context dependencies broken.
 
 ## Loosely Coupled Business Logic
 
-Handle responses using `onComplete` and `onErr` when using `Suvidha` with `DefaultHandlers`.
+Handles responses using `onComplete` and `onErr` when using `Suvidha` with `Handlers`.
 This separates your core business logic from framework-specific response methods, keeping your code cleaner by delegating response handling to the handlers.
 
 ```ts
@@ -358,11 +381,12 @@ const requestHandler = (user: UserDTO) => {
 app.post(
     "/users",
     suvidha()
-        .body(UserSchema)
         .use(authenticate)
         .use(roleCheck)
+        .body(UserSchema)
         .handler(async (req) => {
-            const newUser = req.body; // type of newUser: z.infer<typeof UserSchema>
+            const newUser = req.body;
+            const { role } = req.context.user;
             return createUserHandler(newUser, role); // Execute business logic
         }),
 );
@@ -419,19 +443,19 @@ app.post(
 
 ## DRY Suvidha
 
-If you have common middlewares accross multiple routes, you can create a `Suvidha` instance and reuse it.
+If you have common middlewares across multiple routes, you can create a `Suvidha` instance and reuse it.
 
 ```ts {8, 17, 29, 39}
 import { Suvidha, DefaultHandlers, Http } from "suvidha";
 
-declare function authenticate(req: any): Promise<{ role: string }>;
+declare function authenticate(req: Request): Promise<{ role: string }>;
 
 const suvidha = () => Suvidha.create(new DefaultHandlers());
 
 // instance with middlewares for authentication
 const auth = () =>
-    suvidha().use(async (conn) => {
-        const user = await authenticate(conn.req).catch((_) => {
+    suvidha().use(async ({ req }) => {
+        const user = await authenticate(req).catch((_) => {
             throw new Http.Unauthorized();
         });
         return { user };
@@ -440,8 +464,8 @@ const auth = () =>
 // instance with middlewares for admin authorization
 const adminAuth = () =>
     // Reuse auth middleware
-    auth().use(async (conn) => {
-        if (conn.req.context.user.role !== "admin") {
+    auth().use(async ({ req }) => {
+        if (req.context.user.role !== "admin") {
             throw new Http.Forbidden();
         }
         return {};
@@ -470,8 +494,8 @@ app.get(
 
 ## Adopting Suvidha in Existing Projects
 
-Suvidha's `CtxRequest` extends the standard `Request` object with a `context` property.  
-Existing handlers that accept `Request` will also work with `CtxRequest`. Access the context using `CtxRequest`.
+Suvidha's `CtxRequest` extends the standard `Request` object by adding a `context` property.
+Existing handlers that accept `Request` will also work with `CtxRequest`. The `context` can be accessed using `CtxRequest`.
 
 <CodeGroup>
 
@@ -486,8 +510,13 @@ const BookSchema = z.object({
 type Book = z.infer<typeof BookSchema>;
 type User = { id: string; name: string };
 
-function validateBody(body: any, schema: z.ZodTypeAny) {
-    return schema.safeParse(body).success;
+function validateBody(req: Request, res: Response, zodSchema: ZodType<any>) {
+    try {
+        req.body = zodSchema.parse(req.body);
+        next();
+    } catch (err) {
+        return void res.status(400).send("Bad Request");
+    }
 }
 
 const authenticate = async (
@@ -515,12 +544,7 @@ async function createBookHandler(
 app.post(
     "/books",
     authenticate,
-    (req, res, next) => {
-        if (!validateBody(req.body, BookSchema)) {
-            return void res.status(400).json({ error: "Invalid" });
-        }
-        next();
-    },
+    (req, res) => validateBody(req, res, BookSchema),
     createBookHandler,
 );
 ```
@@ -547,7 +571,7 @@ const authenticate = async ({ req }: Conn) => {
 
 // Use `CtxRequest` in handler, to get context data
 function createBookHandler(
-    req: CtxRequest<{ user: User }, Book>,
+    req: CtxRequest<{ user: User }, any, any, Book>,
     res: Response,
 ): Promise<void> {
     const user = req.context.user;
