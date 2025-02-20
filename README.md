@@ -33,7 +33,7 @@ Suvidha (सुविधा - Hindi for 'facility') is a lightweight, type-safe 
 - **No Rewrites** - Adopt incrementally in existing Express apps.
 - **TypeScript Native** - Inferred types end "guess what's in `req`" games.
 
-For full documentation, see the [Suvidha Documentation](https://na-5c045cf1.mintlify.app/introduction).
+For full documentation, see the [Suvidha Documentation](https://suvidhajs.is-cool.dev).
 
 ## Installation
 

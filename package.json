@@ -20,6 +20,7 @@
         "build": "tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json ./tsconfig.types.json"
     },
     "author": "ishwar gowda",
+    "homepage": "https://suvidhajs.is-cool.dev",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/ishwar00/suvidhajs.git"
