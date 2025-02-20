@@ -157,3 +157,7 @@ export type UserDTO = z.infer<typeof UserSchema>;
     }
 }
 ```
+
+## License
+
+MIT
