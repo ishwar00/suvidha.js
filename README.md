@@ -30,8 +30,13 @@
 
 Suvidha (सुविधा - Hindi for 'facility') is a lightweight, type-safe Express.js library that adds powerful validation, middleware context management, and streamlined response handling.
 
-- **No Rewrites** - Adopt incrementally in existing Express apps.
-- **TypeScript Native** - Inferred types end "guess what's in `req`" games.
+> A utility class for building Express.js route handlers with built-in  
+> data validation and middleware support. It allows you to define Zod  
+> schemas for request parameters, body, and query, and chain middleware
+> functions that can enrich the request context.
+
+-   **No Rewrites** - Adopt incrementally in existing Express apps.
+-   **TypeScript Native** - Inferred types end "guess what's in `req`" games.
 
 For full documentation, see the [Suvidha Documentation](https://suvidhajs.is-cool.dev).
 
