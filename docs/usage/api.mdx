@@ -202,6 +202,41 @@ Defines the final request handler with full type safety.
 - `next` is express' `NextFunction` to call next middleware.
 
 </Accordion>
+
+<Accordion title=".next()" icon="code">
+Acts as an Express.js middleware. It executes the configured **Suvidha middleware** functions (both validation via `.body()`, `.query()`, `.params()` and custom logic via `.use()`) in the order they are defined. After successful execution of these middlewares, `.next()` calls the next middleware in the Express.js chain using the express' `next()` function.
+
+It's like `handler()` but with request handler as express' `next()` function.
+
+### Example
+
+```ts
+const bannedHosts = new Set(["malicious.example.com", "spam.org"]);
+
+app.use(
+    "/protected",
+    suvidha()
+        .use(async (req) => {
+            const clientHost = req.hostname;
+            if (bannedHosts.has(clientHost)) {
+                throw Http.Forbidden.body({
+                    message: `Host "${clientHost}" is banned.`,
+                });
+            }
+            return {};
+        })
+        .query(z.object({ resourceId: z.string() }))
+        .next(), // Proceed to the protected resource handler
+    (req, res) => {
+        // Access validated query parameter
+        const resourceId = req.query.resourceId; // infered type: string
+        res.json({ message: `Access granted to resource: ${resourceId}` });
+    },
+);
+```
+
+</Accordion>
+
 </AccordionGroup>
 
 <Note> 
