@@ -59,6 +59,23 @@ describe("Suvidha Library", () => {
             expect(response.body).toEqual({ received: "valid" });
         });
 
+        it("validates body successfully as middleware", async () => {
+            app.post(
+                "/test",
+                suvidha()
+                    .body(z.object({ name: z.string() }))
+                    .next(),
+                (req, res) => res.json({ received: req.body.name }),
+            );
+
+            const response = await request(app)
+                .post("/test")
+                .send({ name: "valid" })
+                .expect(200);
+
+            expect(response.body).toEqual({ received: "valid" });
+        });
+
         it("rejects invalid body", async () => {
             app.post(
                 "/test",
@@ -68,6 +85,26 @@ describe("Suvidha Library", () => {
                         // Must not reach here
                         throw new UnreachableErr();
                     }),
+            );
+
+            const response = await request(app)
+                .post("/test")
+                .send({ name: 123 })
+                .expect(400);
+
+            expect(response.body.errors).toBeDefined();
+            expect(mockHandlers.onSchemaErr).toHaveBeenCalled();
+        });
+
+        it("rejects invalid body as middleware", async () => {
+            app.post(
+                "/test",
+                suvidha()
+                    .body(z.object({ name: z.string() }))
+                    .next(),
+                (_, res) => {
+                    res.status(500);
+                },
             );
 
             const response = await request(app)

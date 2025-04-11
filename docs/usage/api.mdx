@@ -399,20 +399,14 @@ const userSchema = z.object({
     email: z.string().email(),
 });
 
-// call the next middleware
-const pass = (_: any, __: any, next: NextFunction) => void next();
+const verifyBody = <T extends z.ZodTypeAny>(schema: T) =>
+    suvidha().body(schema).next();
 
-app.post(
-    "/users",
-    suvidha()
-        .body(userSchema)
-        .handler((...args) => pass(...args)),
-    (req, res) => {
-        // type of req.body: z.infer<typeof userSchema>
-        const { email, username } = req.body;
-        res.send({ email, username });
-    },
-);
+app.post("/users", verifyBody(userSchema), (req, res) => {
+    // type of req.body: z.infer<typeof userSchema>
+    const { email, username } = req.body;
+    res.send({ email, username });
+});
 ```
 
 ## DRY Suvidha
