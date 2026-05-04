@@ -7,11 +7,7 @@
     "colors": {
         "primary": "#0D9373",
         "light": "#07C983",
-        "dark": "#0D9373",
-        "anchors": {
-            "from": "#0D9373",
-            "to": "#07C983"
-        }
+        "dark": "#0D9373"
     },
     "codeBlock": {
         "mode": "auto"
@@ -21,22 +17,29 @@
         "url": "https://github.com/ishwar00/suvidha.js"
     },
     "anchors": [],
-    "navigation": [
-        {
-            "group": "Get Started",
-            "pages": ["introduction", "why"]
-        },
-        {
-            "group": "Usage",
-            "pages": ["usage/api", "usage/action", "usage/limitation"]
-        },
-        {
-            "group": "Reference",
-            "pages": [
-                "reference/handlers",
-                "reference/http",
-                "reference/defaultHandlers"
-            ]
-        }
-    ]
+    "navigation": {
+        "tabs": [
+            {
+                "tab": "Docs",
+                "groups": [
+                    {
+                        "group": "Get Started",
+                        "pages": ["introduction", "why"]
+                    },
+                    {
+                        "group": "Usage",
+                        "pages": ["usage/api", "usage/action", "usage/limitation"]
+                    },
+                    {
+                        "group": "Reference",
+                        "pages": [
+                            "reference/handlers",
+                            "reference/http",
+                            "reference/defaultHandlers"
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
 }
