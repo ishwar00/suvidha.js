@@ -1,6 +1,7 @@
 {
-    "$schema": "https://mintlify.com/schema.json",
+    "$schema": "https://mintlify.com/docs.json",
     "name": "Suvidha",
+    "theme": "mint",
     "url": "https://suvidhajs.is-cool.dev",
     "favicon": "/favicon.svg",
     "colors": {
